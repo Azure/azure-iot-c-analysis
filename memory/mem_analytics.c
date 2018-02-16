@@ -267,8 +267,11 @@ int main(int argc, char* argv[])
         gballoc_deinit();
         platform_deinit();
 
-        free((char*)mem_info.device_info.deviceId);
-        free((char*)mem_info.device_info.primaryKey);
+        if (mem_info.create_device != 0)
+        {
+            free((char*)mem_info.device_info.deviceId);
+            free((char*)mem_info.device_info.primaryKey);
+        }
         free((char*)mem_info.device_info.secondaryKey);
         free((char*)mem_info.device_info.generationId);
         free((char*)mem_info.device_info.eTag);

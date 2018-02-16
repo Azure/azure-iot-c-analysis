@@ -31,4 +31,4 @@ make --jobs=$CORES
 # Run the analysis applications
 ./binary_info/binary_info -c $cmake_folder
 
-./memory/telemetry_memory/telemetry_memory -c $IOTHUB_CONNECTION_STRING
+./memory/telemetry_memory/telemetry_memory -c $IOTHUB_CONNECTION_STRING -d jebrandoDevice -k "P3YJYsVQwytQP2JrLca9lSCvyYfPDVjiCZR+5apSQ7c="
