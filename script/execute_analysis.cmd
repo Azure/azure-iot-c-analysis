@@ -36,4 +36,4 @@ if !ERRORLEVEL! neq 0 exit /b !ERRORLEVEL!
 rem Run the analysis applications
 %cmake_folder%\binary_info\Release\binary_info.exe -c %cmake_folder%
 
-%cmake_folder%\analysis\memory\telemetry_memory\release\telemetry_memory.exe -c %IOTHUB_CONNECTION_STRING%
+%cmake_folder%\memory\telemetry_memory\release\telemetry_memory.exe -c %IOTHUB_CONNECTION_STRING%
