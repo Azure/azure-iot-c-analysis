@@ -26,7 +26,7 @@
 #include "iothub_client_version.h"
 
 #define PROXY_PORT                  8888
-#define MESSAGES_TO_USE            1
+#define MESSAGES_TO_USE             1
 #define TIME_BETWEEN_MESSAGES       1
 
 typedef struct IOTHUB_CLIENT_SAMPLE_INFO_TAG
@@ -88,7 +88,7 @@ static void iothub_connection_status(IOTHUB_CLIENT_CONNECTION_STATUS result, IOT
     }
 }
 
-int initiate_lower_level_operation(const char* conn_string, PROTOCOL_TYPE protocol, size_t num_msgs_to_send, bool use_byte_array_msg)
+int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TYPE protocol, size_t num_msgs_to_send, bool use_byte_array_msg)
 {
     int result;
     IOTHUB_CLIENT_TRANSPORT_PROVIDER iothub_transport;
@@ -110,13 +110,14 @@ int initiate_lower_level_operation(const char* conn_string, PROTOCOL_TYPE protoc
     else
     {
         gballoc_resetMetrics();
-        iot_mem_info.operation_type = OPERATION_TELEMETRY_LL;
+        iot_mem_info.operation_type = OPERATION_MEMORY;
+        iot_mem_info.feature_type = FEATURE_TELEMETRY_LL;
 
         // Sending the iothub messages
         IOTHUB_CLIENT_LL_HANDLE iothub_client;
-        if ((iothub_client = IoTHubClient_LL_CreateFromConnectionString(conn_string, iothub_transport) ) == NULL)
+        if ((iothub_client = IoTHubClient_LL_CreateFromConnectionString(conn_info->device_conn_string, iothub_transport) ) == NULL)
         {
-            (void)printf("failed create IoTHub client from connection string %s!\r\n", conn_string);
+            (void)printf("failed create IoTHub client from connection string %s!\r\n", conn_info->device_conn_string);
             result = __LINE__;
         }
         else
@@ -207,7 +208,7 @@ int initiate_lower_level_operation(const char* conn_string, PROTOCOL_TYPE protoc
     return result;
 }
 
-int initiate_upper_level_operation(const char* conn_string, PROTOCOL_TYPE protocol, size_t num_msgs_to_send, bool use_byte_array_msg)
+int initiate_upper_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TYPE protocol, size_t num_msgs_to_send, bool use_byte_array_msg)
 {
     int result;
     IOTHUB_CLIENT_TRANSPORT_PROVIDER iothub_transport;
@@ -230,13 +231,14 @@ int initiate_upper_level_operation(const char* conn_string, PROTOCOL_TYPE protoc
     {
         gballoc_resetMetrics();
 
-        iot_mem_info.operation_type = OPERATION_TELEMETRY_UL;
+        iot_mem_info.operation_type = OPERATION_MEMORY;
+        iot_mem_info.feature_type = FEATURE_TELEMETRY_UL;
 
         // Sending the iothub messages
         IOTHUB_CLIENT_HANDLE iothub_client;
-        if ((iothub_client = IoTHubClient_CreateFromConnectionString(conn_string, iothub_transport)) == NULL)
+        if ((iothub_client = IoTHubClient_CreateFromConnectionString(conn_info->device_conn_string, iothub_transport)) == NULL)
         {
-            (void)printf("failed create IoTHub client from connection string %s!\r\n", conn_string);
+            (void)printf("failed create IoTHub client from connection string %s!\r\n", conn_info->device_conn_string);
             result = __LINE__;
         }
         else

@@ -11,7 +11,7 @@ cmake_folder=$repo_root"/cmake/analysis_linux"
 rm -r -f $cmake_folder
 mkdir -p $cmake_folder
 pushd $cmake_folder
-cmake $repo_root -DCMAKE_BUILD_TYPE=Release -Dskip_samples:BOOL=ON -Duse_prov_client:BOOL=ON -Ddont_use_uploadtoblob:BOOL=ON
+cmake $repo_root -DCMAKE_BUILD_TYPE=Release -Dskip_samples:BOOL=ON -Duse_prov_client:BOOL=ON -Ddont_use_uploadtoblob:BOOL=OFF
 
 # Set the default cores
 CORES=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
@@ -30,5 +30,5 @@ make --jobs=$CORES
 
 # Run the analysis applications
 ./binary_info/binary_info -c $cmake_folder
-
 ./memory/telemetry_memory/telemetry_memory -c $IOTHUB_CONNECTION_STRING -d jebrandoDevice -k "P3YJYsVQwytQP2JrLca9lSCvyYfPDVjiCZR+5apSQ7c="
+./memory/network_info/network_info -c $IOTHUB_CONNECTION_STRING -d jebrandoDevice -k "P3YJYsVQwytQP2JrLca9lSCvyYfPDVjiCZR+5apSQ7c="

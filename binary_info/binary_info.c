@@ -4,24 +4,30 @@
 #include <stdlib.h>
 
 #include "azure_c_shared_utility/strings.h"
-#include "iothub_client_version.h"
 #include "mem_reporter.h"
+#include "iothub_client_version.h"
+
+#ifdef USE_PROVISIONING_CLIENT
+    #include "azure_prov_client/prov_device_client.h"
+#endif
 
 #ifdef WIN32
     static const char* EXECUTABLE_EXT = ".exe";
-    static const char* BINARY_LL_PATH_FMT = "%s\\binary_info\\lower_layer\\%s_%s\\release\\%s_%s%s";
-    static const char* BINARY_UL_PATH_FMT = "%s\\binary_info\\upper_layer\\%s_%s\\release\\%s_%s%s";
+    static const char* BINARY_LL_PATH_FMT = "%s\\binary_info\\lower_layer\\%s%s_%s\\release\\%s%s_%s%s";
+    static const char* BINARY_UL_PATH_FMT = "%s\\binary_info\\upper_layer\\%s%s_%s\\release\\%s%s_%s%s";
 #else
     static const char* EXECUTABLE_EXT = "";
-    static const char* BINARY_LL_PATH_FMT = "%s/binary_info/lower_layer/%s_%s/%s_%s%s";
-    static const char* BINARY_UL_PATH_FMT = "%s/binary_info/upper_layer/%s_%s/%s_%s%s";
+    static const char* BINARY_LL_PATH_FMT = "%s/binary_info/lower_layer/%s%s_%s/%s%s_%s%s";
+    static const char* BINARY_UL_PATH_FMT = "%s/binary_info/upper_layer/%s%s_%s/%s%s_%s%s";
 #endif
 
-static const char* MQTT_BINARY_NAME = "mqtt_transport";
-static const char* MQTT_WS_BINARY_NAME = "mqtt_ws_transport";
-static const char* AMQP_BINARY_NAME = "amqp_transport";
-static const char* AMQP_WS_BINARY_NAME = "amqp_ws_transport";
-static const char* HTTP_BINARY_NAME = "http_transport";
+static const char* const MQTT_BINARY_NAME = "mqtt_transport";
+static const char* const MQTT_WS_BINARY_NAME = "mqtt_ws_transport";
+static const char* const AMQP_BINARY_NAME = "amqp_transport";
+static const char* const AMQP_WS_BINARY_NAME = "amqp_ws_transport";
+static const char* const HTTP_BINARY_NAME = "http_transport";
+
+static const char* const PROV_BINARY_NAME = "prov_";
 
 static const char* UPPER_LAYER_SUFFIX = "ul";
 static const char* LOWER_LAYER_SUFFIX = "ll";
@@ -52,9 +58,29 @@ static const char* get_binary_file(PROTOCOL_TYPE type)
         case PROTOCOL_AMQP_WS:
             result = AMQP_WS_BINARY_NAME;
             break;
+
         default:
         case PROTOCOL_UNKNOWN:
             result = NULL;
+            break;
+    }
+    return result;
+}
+
+static bool is_lower_layer(FEATURE_TYPE type)
+{
+    bool result;
+    switch (type)
+    {
+        case FEATURE_TELEMETRY_LL:
+        case FEATURE_C2D_LL:
+        case FEATURE_METHODS_LL:
+        case FEATURE_TWIN_LL:
+        case FEATURE_PROVISIONING_LL:
+            result = true;
+            break;
+        default:
+            result = false;
             break;
     }
     return result;
@@ -73,7 +99,8 @@ static int calculate_filesize(BINARY_INFO* bin_info, PROTOCOL_TYPE type, const c
     else
     {
         const char* suffix;
-        if (bin_info->operation_type == OPERATION_BINARY_SIZE_LL)
+        const char* prov_exe = "";
+        if (is_lower_layer(bin_info->feature_type) )
         {
             suffix = LOWER_LAYER_SUFFIX;
         }
@@ -82,8 +109,13 @@ static int calculate_filesize(BINARY_INFO* bin_info, PROTOCOL_TYPE type, const c
             suffix = UPPER_LAYER_SUFFIX;
         }
 
+        if (bin_info->feature_type == FEATURE_PROVISIONING_LL || bin_info->feature_type == FEATURE_PROVISIONING_UL)
+        {
+            prov_exe = PROV_BINARY_NAME;
+        }
+
         bin_info->iothub_protocol = type;
-        STRING_HANDLE filename_handle = STRING_construct_sprintf(binary_path_fmt, bin_info->cmake_dir, binary_name, suffix, binary_name, suffix, EXECUTABLE_EXT);
+        STRING_HANDLE filename_handle = STRING_construct_sprintf(binary_path_fmt, bin_info->cmake_dir, prov_exe, binary_name, suffix, prov_exe, binary_name, suffix, EXECUTABLE_EXT);
         if (filename_handle == NULL)
         {
             (void)printf("Failed constructing filename\r\n");
@@ -155,22 +187,38 @@ int main(int argc, char* argv[])
         (void)printf("Failure parsing command line\r\n");
         result = __LINE__;
     }
+    else if (bin_info.cmake_dir == NULL)
+    {
+        (void)printf("Failure cmake directory command line option not supplied\r\n");
+        result = __LINE__;
+    }
     else
     {
+        bin_info.operation_type = OPERATION_BINARY_SIZE;
         bin_info.iothub_version = IoTHubClient_GetVersionString();
-        bin_info.operation_type = OPERATION_BINARY_SIZE_LL;
+        bin_info.feature_type = FEATURE_TELEMETRY_LL;
         (void)calculate_filesize(&bin_info, PROTOCOL_MQTT, BINARY_LL_PATH_FMT);
         (void)calculate_filesize(&bin_info, PROTOCOL_MQTT_WS, BINARY_LL_PATH_FMT);
         (void)calculate_filesize(&bin_info, PROTOCOL_HTTP, BINARY_LL_PATH_FMT);
         (void)calculate_filesize(&bin_info, PROTOCOL_AMQP, BINARY_LL_PATH_FMT);
         (void)calculate_filesize(&bin_info, PROTOCOL_AMQP_WS, BINARY_LL_PATH_FMT);
 
-        bin_info.operation_type = OPERATION_BINARY_SIZE_UL;
+        bin_info.feature_type = FEATURE_TELEMETRY_UL;
         (void)calculate_filesize(&bin_info, PROTOCOL_MQTT, BINARY_UL_PATH_FMT);
         (void)calculate_filesize(&bin_info, PROTOCOL_MQTT_WS, BINARY_UL_PATH_FMT);
         (void)calculate_filesize(&bin_info, PROTOCOL_HTTP, BINARY_UL_PATH_FMT);
         (void)calculate_filesize(&bin_info, PROTOCOL_AMQP, BINARY_UL_PATH_FMT);
         (void)calculate_filesize(&bin_info, PROTOCOL_AMQP_WS, BINARY_UL_PATH_FMT);
+
+#ifdef USE_PROVISIONING_CLIENT
+        bin_info.iothub_version = Prov_Device_GetVersionString();
+        bin_info.feature_type = FEATURE_PROVISIONING_LL;
+        (void)calculate_filesize(&bin_info, PROTOCOL_MQTT, BINARY_LL_PATH_FMT);
+        (void)calculate_filesize(&bin_info, PROTOCOL_MQTT_WS, BINARY_LL_PATH_FMT);
+        (void)calculate_filesize(&bin_info, PROTOCOL_HTTP, BINARY_LL_PATH_FMT);
+        (void)calculate_filesize(&bin_info, PROTOCOL_AMQP, BINARY_LL_PATH_FMT);
+        (void)calculate_filesize(&bin_info, PROTOCOL_AMQP_WS, BINARY_LL_PATH_FMT);
+#endif
 
         result = 0;
     }

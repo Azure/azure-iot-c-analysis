@@ -17,11 +17,17 @@ ENDIF(WIN32)
 
 add_definitions(-DGB_MEASURE_MEMORY_FOR_THIS -DGB_DEBUG_ALLOC)
 
+if (${use_prov_client})
+    add_definitions(-DUSE_PROVISIONING_CLIENT)
+endif()
+
 include_directories(. ..)
 include_directories(${SDK_INCLUDE_DIRS})
 
 add_executable(binary_info ${binary_info_c_files} ${binary_info_h_files})
 target_link_libraries(binary_info aziotsharedutil iothub_client)
+
+target_link_libraries(binary_info prov_device_client)
 
 add_subdirectory(lower_layer)
 add_subdirectory(upper_layer)

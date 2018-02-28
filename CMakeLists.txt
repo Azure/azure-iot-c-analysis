@@ -43,12 +43,8 @@ set(SDK_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/deps/c-sdk/iothub_client/inc
     ${CMAKE_SOURCE_DIR}/deps/c-sdk/iothub_service_client/inc
     ${CMAKE_SOURCE_DIR}/deps/c-sdk/c-utility/inc
+    ${CMAKE_SOURCE_DIR}/deps/c-sdk/provisioning_client/inc
 )
-
-set(IOTHUB_CLIENT_BIN_DIR ./deps/c-sdk/iothub_client/Debug/)
-set(UAMQP_BIN_DIR ./deps/c-sdk/uamqp/Debug/)
-set(UMQTT_BIN_DIR ./deps/c-sdk/umqtt/Debug/)
-set(C_UTIL_BIN_DIR ./deps/c-sdk/c-utility/Debug/)
 
 add_subdirectory(memory)
 add_analytic_directory(binary_info "binary_info")

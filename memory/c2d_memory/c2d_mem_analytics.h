@@ -15,8 +15,8 @@ extern "C" {
 
 #include "mem_reporter.h"
 
-extern int initiate_lower_level_operation(const char* conn_string, PROTOCOL_TYPE protocol, size_t num_msgs_to_recv, bool use_byte_array_msg);
-extern int initiate_upper_level_operation(const char* conn_string, PROTOCOL_TYPE protocol, size_t num_msgs_to_recv, bool use_byte_array_msg);
+extern int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TYPE protocol, size_t num_msgs_to_recv, bool use_byte_array_msg);
+extern int initiate_upper_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TYPE protocol, size_t num_msgs_to_recv, bool use_byte_array_msg);
 
 #ifdef __cplusplus
 }

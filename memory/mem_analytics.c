@@ -7,11 +7,16 @@
     #include "sdk_mem_analytics.h"
 #elif USE_C2D
     #include "c2d_mem_analytics.h"
+#elif USE_PROVISIONING
+    #include "provisioning_mem.h"
+#elif USE_NETWORKING
+    #include "network_info.h"
 #endif
 
 #include "azure_c_shared_utility/connection_string_parser.h"
 #include "azure_c_shared_utility/platform.h"
 #include "azure_c_shared_utility/gballoc.h"
+#include "azure_c_shared_utility/gbnetwork.h"
 
 #include "iothub_service_client_auth.h"
 #include "iothub_registrymanager.h"
@@ -25,6 +30,7 @@ typedef enum ARGUEMENT_TYPE_TAG
 {
     ARGUEMENT_TYPE_UNKNOWN,
     ARGUEMENT_TYPE_CONNECTION_STRING,
+    ARGUEMENT_TYPE_SCOPE_ID,
     ARGUEMENT_TYPE_DEVICE_ID,
     ARGUEMENT_TYPE_DEVICE_KEY
 } ARGUEMENT_TYPE;
@@ -47,6 +53,11 @@ static int initialize_sdk()
     else if (gballoc_init() != 0)
     {
         (void)printf("gballoc_init failed\r\n");
+        result = __LINE__;
+    }
+    else if (gbnetwork_init() != 0)
+    {
+        (void)printf("gbnetwork_init failed\r\n");
         result = __LINE__;
     }
     else
@@ -128,15 +139,15 @@ static void remove_device(MEM_ANALYTIC_INFO* mem_info)
     }
 }
 
-static char* construct_dev_conn_string(MEM_ANALYTIC_INFO* mem_info)
+static int construct_dev_conn_string(MEM_ANALYTIC_INFO* mem_info, CONNECTION_INFO* conn_info)
 {
-    char* result;
+    int result;
 
     MAP_HANDLE parse_handle = connectionstringparser_parse_from_char(mem_info->connection_string);
     if (parse_handle == NULL)
     {
         (void)printf("Failure parsing connection string\r\n");
-        result = NULL;
+        result = __LINE__;
     }
     else
     {
@@ -144,21 +155,25 @@ static char* construct_dev_conn_string(MEM_ANALYTIC_INFO* mem_info)
         if (hostname == NULL)
         {
             (void)printf("Failure parsing connection string\r\n");
-            result = NULL;
+            result = __LINE__;
         }
         else
         {
             size_t alloc_len = strlen(hostname)+strlen(mem_info->device_info.deviceId)+strlen(mem_info->device_info.primaryKey)+strlen(DEVICE_CONNECTION_STRING_FMT);
-            if ((result = malloc(alloc_len+1)) == NULL)
+            if ((conn_info->device_conn_string = malloc(alloc_len+1)) == NULL)
             {
                 (void)printf("Failure allocating device connection string\r\n");
-                result = NULL;
+                result = __LINE__;
             }
-            else if (sprintf(result, DEVICE_CONNECTION_STRING_FMT, hostname, mem_info->device_info.deviceId, mem_info->device_info.primaryKey) == 0)
+            else if (sprintf(conn_info->device_conn_string, DEVICE_CONNECTION_STRING_FMT, hostname, mem_info->device_info.deviceId, mem_info->device_info.primaryKey) == 0)
             {
                 (void)printf("Failure constructing device connection string\r\n");
-                free(result);
-                result = NULL;
+                free(conn_info->device_conn_string);
+                result = __LINE__;
+            }
+            else
+            {
+                result = 0;
             }
         }
         Map_Destroy(parse_handle);
@@ -166,7 +181,7 @@ static char* construct_dev_conn_string(MEM_ANALYTIC_INFO* mem_info)
     return result;
 }
 
-static int parse_command_line(int argc, char* argv[], MEM_ANALYTIC_INFO* mem_info)
+static int parse_command_line(int argc, char* argv[], MEM_ANALYTIC_INFO* mem_info, CONNECTION_INFO* conn_info)
 {
     int result = 0;
     ARGUEMENT_TYPE argument_type = ARGUEMENT_TYPE_UNKNOWN;
@@ -187,6 +202,10 @@ static int parse_command_line(int argc, char* argv[], MEM_ANALYTIC_INFO* mem_inf
             {
                 argument_type = ARGUEMENT_TYPE_DEVICE_KEY;
             }
+            else if (argv[index][0] == '-' && (argv[index][1] == 's' || argv[index][1] == 'S'))
+            {
+                argument_type = ARGUEMENT_TYPE_SCOPE_ID;
+            }
         }
         else
         {
@@ -200,6 +219,9 @@ static int parse_command_line(int argc, char* argv[], MEM_ANALYTIC_INFO* mem_inf
                     break;
                 case ARGUEMENT_TYPE_DEVICE_KEY:
                     mem_info->device_info.primaryKey = argv[index];
+                    break;
+                case ARGUEMENT_TYPE_SCOPE_ID:
+                    conn_info->scope_id = argv[index];
                     break;
                 case ARGUEMENT_TYPE_UNKNOWN:
                 default:
@@ -217,19 +239,41 @@ static int parse_command_line(int argc, char* argv[], MEM_ANALYTIC_INFO* mem_inf
     return result;
 }
 
+static void send_heap_info(CONNECTION_INFO* conn_info)
+{
+    // AMQP Sending
+    initiate_lower_level_operation(conn_info, PROTOCOL_AMQP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+/*    initiate_lower_level_operation(conn_info, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+    // HTTP Sending
+    initiate_lower_level_operation(conn_info, PROTOCOL_HTTP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+    // MQTT Sending
+    initiate_lower_level_operation(conn_info, PROTOCOL_MQTT, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+    initiate_lower_level_operation(conn_info, PROTOCOL_MQTT_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+
+    // AMQP Sending
+    initiate_upper_level_operation(conn_info, PROTOCOL_AMQP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+    initiate_upper_level_operation(conn_info, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+    // HTTP Sending
+    initiate_upper_level_operation(conn_info, PROTOCOL_HTTP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+    // MQTT Sending
+    initiate_upper_level_operation(conn_info, PROTOCOL_MQTT, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+    initiate_upper_level_operation(conn_info, PROTOCOL_MQTT_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);*/
+}
+
 int main(int argc, char* argv[])
 {
     int result;
     MEM_ANALYTIC_INFO mem_info;
-    char* device_conn_string;
+    CONNECTION_INFO conn_info;
     memset(&mem_info, 0, sizeof(mem_info));
+    memset(&conn_info, 0, sizeof(conn_info));
 
-    if (parse_command_line(argc, argv, &mem_info) != 0)
+    if (parse_command_line(argc, argv, &mem_info, &conn_info) != 0)
     {
         (void)printf("Failure parsing command line\r\n");
         result = __LINE__;
     }
-    else if ((device_conn_string = construct_dev_conn_string(&mem_info)) == NULL)
+    else if (construct_dev_conn_string(&mem_info, &conn_info) != 0)
     {
         (void)printf("failed construct dev\r\n");
         result = __LINE__;
@@ -237,27 +281,14 @@ int main(int argc, char* argv[])
     else if (initialize_sdk() != 0)
     {
         (void)printf("initializing SDK failed\r\n");
-        free(device_conn_string);
+        free(conn_info.device_conn_string);
         result = __LINE__;
     }
     else
     {
+        send_heap_info(&conn_info);
+
         result = 0;
-        // AMQP Sending
-        initiate_lower_level_operation(device_conn_string, PROTOCOL_AMQP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-        initiate_lower_level_operation(device_conn_string, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-        initiate_upper_level_operation(device_conn_string, PROTOCOL_AMQP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-        initiate_upper_level_operation(device_conn_string, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-
-        // HTTP Sending
-        initiate_lower_level_operation(device_conn_string, PROTOCOL_HTTP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-        initiate_upper_level_operation(device_conn_string, PROTOCOL_HTTP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-
-        // Send MQTT messages
-        initiate_lower_level_operation(device_conn_string, PROTOCOL_MQTT, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-        initiate_lower_level_operation(device_conn_string, PROTOCOL_MQTT_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-        initiate_upper_level_operation(device_conn_string, PROTOCOL_MQTT, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-        initiate_upper_level_operation(device_conn_string, PROTOCOL_MQTT_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
 
         if (mem_info.create_device != 0)
         {
@@ -266,12 +297,14 @@ int main(int argc, char* argv[])
 
         gballoc_deinit();
         platform_deinit();
+        gbnetwork_deinit();
 
         if (mem_info.create_device != 0)
         {
             free((char*)mem_info.device_info.deviceId);
             free((char*)mem_info.device_info.primaryKey);
         }
+        free(conn_info.device_conn_string);
         free((char*)mem_info.device_info.secondaryKey);
         free((char*)mem_info.device_info.generationId);
         free((char*)mem_info.device_info.eTag);
@@ -282,8 +315,6 @@ int main(int argc, char* argv[])
         free((char*)mem_info.device_info.configuration);
         free((char*)mem_info.device_info.deviceProperties);
         free((char*)mem_info.device_info.serviceProperties);
-
-        free(device_conn_string);
     }
 
 #ifdef _DEBUG

@@ -33,27 +33,39 @@ static const char* AMQP_WS_PROTOCOL_NAME = "AMQP WS PROTOCOL";
         PROTOCOL_AMQP_WS
     } PROTOCOL_TYPE;
 
+    typedef enum FEATURE_TYPE_TAG
+    {
+        FEATURE_TELEMETRY_LL,
+        FEATURE_TELEMETRY_UL,
+        FEATURE_C2D_LL,
+        FEATURE_C2D_UL,
+        FEATURE_METHODS_LL,
+        FEATURE_METHODS_UL,
+        FEATURE_TWIN_LL,
+        FEATURE_TWIN_UL,
+        FEATURE_PROVISIONING_LL,
+        FEATURE_PROVISIONING_UL
+    } FEATURE_TYPE;
+
     typedef enum OPERATION_TYPE_TAG
     {
-        OPERATION_TELEMETRY_LL,
-        OPERATION_TELEMETRY_UL,
-        OPERATION_C2D_LL,
-        OPERATION_C2D_UL,
-        OPERATION_BINARY_SIZE_LL,
-        OPERATION_BINARY_SIZE_UL,
-        OPERATION_METHODS_LL,
-        OPERATION_METHODS_UL,
-        OPERATION_TWIN_LL,
-        OPERATION_TWIN_UL,
-        OPERATION_PROVISIONING_LL,
-        OPERATION_PROVISIONING_UL
+        OPERATION_NETWORK,
+        OPERATION_MEMORY,
+        OPERATION_BINARY_SIZE,
     } OPERATION_TYPE;
-    
+
+    typedef struct CONNECTION_INFO_TAG
+    {
+        char* device_conn_string;
+        char* scope_id;
+    } CONNECTION_INFO;
+
     typedef struct MEM_ANALYSIS_INFO_TAG
     {
         const char* iothub_version;
         PROTOCOL_TYPE iothub_protocol;
         OPERATION_TYPE operation_type;
+        FEATURE_TYPE feature_type;
         size_t msg_sent;
     } MEM_ANALYSIS_INFO;
 
@@ -62,12 +74,14 @@ static const char* AMQP_WS_PROTOCOL_NAME = "AMQP WS PROTOCOL";
         const char* iothub_version;
         PROTOCOL_TYPE iothub_protocol;
         OPERATION_TYPE operation_type;
+        FEATURE_TYPE feature_type;
         const char* cmake_dir;
         long binary_size;
     } BINARY_INFO;
 
     extern void record_memory_usage(const MEM_ANALYSIS_INFO* iot_mem_info);
     extern void report_binary_sizes(const BINARY_INFO* bin_info);
+    extern void record_network_usage(const MEM_ANALYSIS_INFO* iot_mem_info);
 
 #ifdef __cplusplus
 }
