@@ -35,5 +35,6 @@ if !ERRORLEVEL! neq 0 exit /b !ERRORLEVEL!
 
 rem Run the analysis applications
 %cmake_folder%\binary_info\Release\binary_info.exe -c %cmake_folder%
-%cmake_folder%\memory\telemetry_memory\release\telemetry_memory.exe -c "HostName=iot-sdks-test.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=iLgT3XP2sVkC0nQufCtPtgn/kZuR/tdw13Z3DSFOTNU=" -d jebrandoDevice -k "P3YJYsVQwytQP2JrLca9lSCvyYfPDVjiCZR+5apSQ7c="
-%cmake_folder%\memory\network_info\release\network_info -c "HostName=iot-sdks-test.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=iLgT3XP2sVkC0nQufCtPtgn/kZuR/tdw13Z3DSFOTNU=" -d jebrandoDevice -k "P3YJYsVQwytQP2JrLca9lSCvyYfPDVjiCZR+5apSQ7c="
+%cmake_folder%\memory\telemetry_memory\release\telemetry_memory.exe -c %IOTHUB_CONNECTION_STRING% -d jebrandoDevice -k "P3YJYsVQwytQP2JrLca9lSCvyYfPDVjiCZR+5apSQ7c="
+%cmake_folder%\memory\network_info\release\network_info -c %IOTHUB_CONNECTION_STRING% -d jebrandoDevice -k "P3YJYsVQwytQP2JrLca9lSCvyYfPDVjiCZR+5apSQ7c="
+%cmake_folder%\memory\provisioning_mem\release\provisioning_mem -c "global.azure-devices-provisioning.net" -s %PROV_SCOPE_ID%

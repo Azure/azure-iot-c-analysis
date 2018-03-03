@@ -143,40 +143,62 @@ static int construct_dev_conn_string(MEM_ANALYTIC_INFO* mem_info, CONNECTION_INF
 {
     int result;
 
-    MAP_HANDLE parse_handle = connectionstringparser_parse_from_char(mem_info->connection_string);
-    if (parse_handle == NULL)
+    if (conn_info->scope_id == NULL)
     {
-        (void)printf("Failure parsing connection string\r\n");
-        result = __LINE__;
-    }
-    else
-    {
-        const char* hostname = Map_GetValueFromKey(parse_handle, "HostName");
-        if (hostname == NULL)
+        MAP_HANDLE parse_handle = connectionstringparser_parse_from_char(mem_info->connection_string);
+        if (parse_handle == NULL)
         {
             (void)printf("Failure parsing connection string\r\n");
             result = __LINE__;
         }
         else
         {
-            size_t alloc_len = strlen(hostname)+strlen(mem_info->device_info.deviceId)+strlen(mem_info->device_info.primaryKey)+strlen(DEVICE_CONNECTION_STRING_FMT);
-            if ((conn_info->device_conn_string = malloc(alloc_len+1)) == NULL)
+            const char* hostname = Map_GetValueFromKey(parse_handle, "HostName");
+            if (hostname == NULL)
             {
-                (void)printf("Failure allocating device connection string\r\n");
-                result = __LINE__;
-            }
-            else if (sprintf(conn_info->device_conn_string, DEVICE_CONNECTION_STRING_FMT, hostname, mem_info->device_info.deviceId, mem_info->device_info.primaryKey) == 0)
-            {
-                (void)printf("Failure constructing device connection string\r\n");
-                free(conn_info->device_conn_string);
+                (void)printf("Failure parsing connection string\r\n");
                 result = __LINE__;
             }
             else
             {
-                result = 0;
+                size_t alloc_len = strlen(hostname) + strlen(mem_info->device_info.deviceId) + strlen(mem_info->device_info.primaryKey) + strlen(DEVICE_CONNECTION_STRING_FMT);
+                if ((conn_info->device_conn_string = malloc(alloc_len + 1)) == NULL)
+                {
+                    (void)printf("Failure allocating device connection string\r\n");
+                    result = __LINE__;
+                }
+                else if (sprintf(conn_info->device_conn_string, DEVICE_CONNECTION_STRING_FMT, hostname, mem_info->device_info.deviceId, mem_info->device_info.primaryKey) == 0)
+                {
+                    (void)printf("Failure constructing device connection string\r\n");
+                    free(conn_info->device_conn_string);
+                    result = __LINE__;
+                }
+                else
+                {
+                    result = 0;
+                }
             }
+            Map_Destroy(parse_handle);
         }
-        Map_Destroy(parse_handle);
+    }
+    else
+    {
+        size_t alloc_len = strlen(mem_info->connection_string);
+        if ((conn_info->device_conn_string = malloc(alloc_len + 1)) == NULL)
+        {
+            (void)printf("Failure allocating device connection string\r\n");
+            result = __LINE__;
+        }
+        else if (strcpy(conn_info->device_conn_string, mem_info->connection_string) == 0)
+        {
+            (void)printf("Failure constructing device connection string\r\n");
+            free(conn_info->device_conn_string);
+            result = __LINE__;
+        }
+        else
+        {
+            result = 0;
+        }
     }
     return result;
 }
@@ -232,7 +254,7 @@ static int parse_command_line(int argc, char* argv[], MEM_ANALYTIC_INFO* mem_inf
         }
     }
 
-    if (mem_info->device_info.deviceId == NULL)
+    if (mem_info->device_info.deviceId == NULL && conn_info->scope_id == NULL)
     {
         result = create_device(mem_info);
     }
@@ -243,7 +265,7 @@ static void send_heap_info(CONNECTION_INFO* conn_info)
 {
     // AMQP Sending
     initiate_lower_level_operation(conn_info, PROTOCOL_AMQP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-/*    initiate_lower_level_operation(conn_info, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+    initiate_lower_level_operation(conn_info, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
     // HTTP Sending
     initiate_lower_level_operation(conn_info, PROTOCOL_HTTP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
     // MQTT Sending
@@ -257,7 +279,7 @@ static void send_heap_info(CONNECTION_INFO* conn_info)
     initiate_upper_level_operation(conn_info, PROTOCOL_HTTP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
     // MQTT Sending
     initiate_upper_level_operation(conn_info, PROTOCOL_MQTT, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-    initiate_upper_level_operation(conn_info, PROTOCOL_MQTT_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);*/
+    initiate_upper_level_operation(conn_info, PROTOCOL_MQTT_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
 }
 
 int main(int argc, char* argv[])

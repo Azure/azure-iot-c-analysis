@@ -218,6 +218,13 @@ int main(int argc, char* argv[])
         (void)calculate_filesize(&bin_info, PROTOCOL_HTTP, BINARY_LL_PATH_FMT);
         (void)calculate_filesize(&bin_info, PROTOCOL_AMQP, BINARY_LL_PATH_FMT);
         (void)calculate_filesize(&bin_info, PROTOCOL_AMQP_WS, BINARY_LL_PATH_FMT);
+
+        bin_info.feature_type = FEATURE_PROVISIONING_UL;
+        (void)calculate_filesize(&bin_info, PROTOCOL_MQTT, BINARY_UL_PATH_FMT);
+        (void)calculate_filesize(&bin_info, PROTOCOL_MQTT_WS, BINARY_UL_PATH_FMT);
+        (void)calculate_filesize(&bin_info, PROTOCOL_HTTP, BINARY_UL_PATH_FMT);
+        (void)calculate_filesize(&bin_info, PROTOCOL_AMQP, BINARY_UL_PATH_FMT);
+        (void)calculate_filesize(&bin_info, PROTOCOL_AMQP_WS, BINARY_UL_PATH_FMT);
 #endif
 
         result = 0;

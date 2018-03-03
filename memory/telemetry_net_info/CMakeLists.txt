@@ -25,8 +25,8 @@ add_definitions(-DGB_MEASURE_MEMORY_FOR_THIS -DGB_DEBUG_ALLOC -DGB_DEBUG_NETWORK
 include_directories(. .. ../..)
 include_directories(${SDK_INCLUDE_DIRS})
 
-add_executable(network_info ${network_info_c_files} ${network_info_h_files})
-target_link_libraries(network_info 
+add_executable(telemetry_network_info ${network_info_c_files} ${network_info_h_files})
+target_link_libraries(telemetry_network_info 
     iothub_client
     iothub_client_mqtt_transport
     iothub_client_mqtt_ws_transport
@@ -40,7 +40,7 @@ target_link_libraries(network_info
 )
 
 if(WIN32)
-    target_link_libraries(network_info ws2_32 rpcrt4 ncrypt winhttp secur32 crypt32)
+    target_link_libraries(telemetry_network_info ws2_32 rpcrt4 ncrypt winhttp secur32 crypt32)
 else()
-    target_link_libraries(network_info m)
+    target_link_libraries(telemetry_network_info m)
 endif()

@@ -32,3 +32,4 @@ make --jobs=$CORES
 ./binary_info/binary_info -c $cmake_folder
 ./memory/telemetry_memory/telemetry_memory -c $IOTHUB_CONNECTION_STRING -d jebrandoDevice -k "P3YJYsVQwytQP2JrLca9lSCvyYfPDVjiCZR+5apSQ7c="
 ./memory/network_info/network_info -c $IOTHUB_CONNECTION_STRING -d jebrandoDevice -k "P3YJYsVQwytQP2JrLca9lSCvyYfPDVjiCZR+5apSQ7c="
+./memory/provisioning_mem/provisioning_mem -c "global.azure-devices-provisioning.net" -s $PROV_SCOPE_ID

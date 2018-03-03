@@ -40,15 +40,15 @@ typedef struct PROV_TEST_INFO_TAG
     int error;
 } PROV_TEST_INFO;
 
-static PROV_DEVICE_TRANSPORT_PROVIDER_FUNCTION initialize(MEM_ANALYSIS_INFO* iot_mem_info, PROTOCOL_TYPE protocol, size_t num_msgs_to_send)
+static PROV_DEVICE_TRANSPORT_PROVIDER_FUNCTION initialize(MEM_ANALYSIS_INFO* prov_mem_info, PROTOCOL_TYPE protocol, size_t num_msgs_to_send)
 {
     PROV_DEVICE_TRANSPORT_PROVIDER_FUNCTION result;
     (void)num_msgs_to_send;
 
-    iot_mem_info->msg_sent = 0;
-    iot_mem_info->iothub_version = Prov_Device_GetVersionString();
+    prov_mem_info->msg_sent = 0;
+    prov_mem_info->iothub_version = Prov_Device_GetVersionString();
 
-    iot_mem_info->iothub_protocol = protocol;
+    prov_mem_info->iothub_protocol = protocol;
 
     switch (protocol)
     {
@@ -80,7 +80,6 @@ static void register_device_callback(PROV_DEVICE_RESULT register_result, const c
     if (register_result == PROV_DEVICE_RESULT_OK)
     {
         prov_info->registration_complete = 1;
-        (void)printf("\r\nRegistration Information received from service: %s, deviceId: %s\r\n", iothub_uri, device_id);
     }
     else
     {
@@ -106,6 +105,13 @@ int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
         PROV_DEVICE_TRANSPORT_PROVIDER_FUNCTION prov_transport;
         PROV_DEVICE_LL_HANDLE prov_device_handle;
         MEM_ANALYSIS_INFO prov_mem_info;
+        memset(&prov_mem_info, 0, sizeof(MEM_ANALYSIS_INFO));
+        memset(&prov_info, 0, sizeof(PROV_TEST_INFO));
+
+        prov_mem_info.operation_type = OPERATION_MEMORY;
+        prov_mem_info.feature_type = FEATURE_PROVISIONING_LL;
+
+        gballoc_resetMetrics();
 
         if ((prov_transport = initialize(&prov_mem_info, protocol, num_msgs_to_send)) == NULL)
         {
@@ -121,7 +127,7 @@ int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
         {
             Prov_Device_LL_SetOption(prov_device_handle, OPTION_TRUSTED_CERT, certificates);
 
-            if (Prov_Device_LL_Register_Device(prov_device_handle, register_device_callback, &prov_info, NULL, NULL) == PROV_DEVICE_RESULT_OK)
+            if (Prov_Device_LL_Register_Device(prov_device_handle, register_device_callback, &prov_info, NULL, NULL) != PROV_DEVICE_RESULT_OK)
             {
                 (void)printf("failed calling Prov_Device_LL_Register_Device\r\n");
                 result = __LINE__;
@@ -138,6 +144,8 @@ int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
             Prov_Device_LL_Destroy(prov_device_handle);
         }
         prov_dev_security_deinit();
+
+        record_memory_usage(&prov_mem_info);
     }
     return result;
 }
@@ -156,13 +164,17 @@ int initiate_upper_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
     }
     else
     {
-        HTTP_PROXY_OPTIONS http_proxy;
         PROV_DEVICE_TRANSPORT_PROVIDER_FUNCTION prov_transport;
         PROV_TEST_INFO prov_info;
         PROV_DEVICE_HANDLE prov_device_handle;
         MEM_ANALYSIS_INFO prov_mem_info;
+        memset(&prov_mem_info, 0, sizeof(MEM_ANALYSIS_INFO));
+        memset(&prov_info, 0, sizeof(PROV_TEST_INFO));
 
-        memset(&http_proxy, 0, sizeof(HTTP_PROXY_OPTIONS));
+        prov_mem_info.operation_type = OPERATION_MEMORY;
+        prov_mem_info.feature_type = FEATURE_PROVISIONING_UL;
+
+        gballoc_resetMetrics();
 
         if ((prov_transport = initialize(&prov_mem_info, protocol, num_msgs_to_send)) == NULL)
         {
@@ -178,7 +190,7 @@ int initiate_upper_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
         {
             Prov_Device_SetOption(prov_device_handle, OPTION_TRUSTED_CERT, certificates);
 
-            if (Prov_Device_Register_Device(prov_device_handle, register_device_callback, &prov_info, NULL, NULL) == PROV_DEVICE_RESULT_OK)
+            if (Prov_Device_Register_Device(prov_device_handle, register_device_callback, &prov_info, NULL, NULL) != PROV_DEVICE_RESULT_OK)
             {
                 (void)printf("failed calling Prov_Device_Register_Device\r\n");
                 result = __LINE__;
@@ -194,7 +206,7 @@ int initiate_upper_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
             Prov_Device_Destroy(prov_device_handle);
         }
         prov_dev_security_deinit();
+        record_memory_usage(&prov_mem_info);
     }
-
     return result;
 }

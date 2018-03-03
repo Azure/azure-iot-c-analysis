@@ -45,24 +45,24 @@ static IOTHUB_CLIENT_TRANSPORT_PROVIDER initialize(MEM_ANALYSIS_INFO* iot_mem_in
     iot_mem_info->iothub_protocol = protocol;
     switch (protocol)
     {
-    case PROTOCOL_MQTT:
-        result = MQTT_Protocol;
-        break;
-    case PROTOCOL_MQTT_WS:
-        result = MQTT_WebSocket_Protocol;
-        break;
-    case PROTOCOL_HTTP:
-        result = HTTP_Protocol;
-        break;
-    case PROTOCOL_AMQP:
-        result = AMQP_Protocol;
-        break;
-    case PROTOCOL_AMQP_WS:
-        result = AMQP_Protocol_over_WebSocketsTls;
-        break;
-    default:
-        result = NULL;
-        break;
+        case PROTOCOL_MQTT:
+            result = MQTT_Protocol;
+            break;
+        case PROTOCOL_MQTT_WS:
+            result = MQTT_WebSocket_Protocol;
+            break;
+        case PROTOCOL_HTTP:
+            result = HTTP_Protocol;
+            break;
+        case PROTOCOL_AMQP:
+            result = AMQP_Protocol;
+            break;
+        case PROTOCOL_AMQP_WS:
+            result = AMQP_Protocol_over_WebSocketsTls;
+            break;
+        default:
+            result = NULL;
+            break;
     }
     return result;
 }
@@ -99,10 +99,11 @@ int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
     else
     {
         IOTHUB_CLIENT_TRANSPORT_PROVIDER iothub_transport;
-
         TICK_COUNTER_HANDLE tick_counter_handle;
         MEM_ANALYSIS_INFO iot_mem_info;
         memset(&iot_mem_info, 0, sizeof(MEM_ANALYSIS_INFO));
+
+        gbnetwork_resetMetrics();
 
         if ((iothub_transport = initialize(&iot_mem_info, protocol, num_msgs_to_send)) == NULL)
         {
@@ -153,13 +154,14 @@ int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
                         (void)tickcounter_get_current_ms(tick_counter_handle, &current_tick);
                         if ((current_tick - last_send_time) / 1000 > TIME_BETWEEN_MESSAGES)
                         {
+                            IOTHUB_MESSAGE_HANDLE msg_handle;
                             static char msgText[1024];
                             sprintf_s(msgText, sizeof(msgText), "{ \"message_index\" : \"%zu\" }", msg_count++);
 
-                            IOTHUB_MESSAGE_HANDLE msg_handle;
+                            iot_mem_info.msg_sent = strlen(msgText);
                             if (use_byte_array_msg)
                             {
-                                msg_handle = IoTHubMessage_CreateFromByteArray((const unsigned char*)msgText, strlen(msgText));
+                                msg_handle = IoTHubMessage_CreateFromByteArray((const unsigned char*)msgText, iot_mem_info.msg_sent);
                             }
                             else
                             {

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #include "mem_reporter.h"
 
@@ -21,7 +22,7 @@
 #endif
 
 static const char* const UNKNOWN_TYPE = "unknown";
-static const char* const NETWORK_ANALYSIS_JSON_FMT = "{ \"sdkAnalysis\": { \"opType\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgCount\" : %d, \"bytesOnWire\" : %zu, \"numOfSends\" : %zu } }";
+static const char* const NETWORK_ANALYSIS_JSON_FMT = "{ \"sdkAnalysis\": { \"opType\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgBytesSent\" : %d, \"sendBytes\" : %" PRIu64 ", \"numSends\" : %ld, \"recvBytes\" : %" PRIu64 ", \"numRecv\" : %ld } }";
 static const char* const BINARY_SIZE_JSON_FMT = "{ \"sdkAnalysis\": { \"opType\": \"%s\", \"layer\": \"%s\", \"feature\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"binarySize\" : \"%ld\"} }";
 static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"sdkAnalysis\": { \"opType\": \"%s\", \"layer\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgCount\" : %d, \"maxMemory\" : %zu, \"currMemory\" : %zu, \"numAlloc\" : %zu } }";
 
@@ -59,7 +60,7 @@ static const char* get_protocol_name(PROTOCOL_TYPE protocol)
     return result;
 }
 
-static const char* get_layer_type(OPERATION_TYPE type)
+static const char* get_layer_type(FEATURE_TYPE type)
 {
     const char* result;
     switch (type)
@@ -141,7 +142,8 @@ static const char* get_operation_type(OPERATION_TYPE type)
 
 void report_binary_sizes(const BINARY_INFO* bin_info)
 {
-    STRING_HANDLE binary_data = STRING_construct_sprintf(BINARY_SIZE_JSON_FMT, get_operation_type(bin_info->operation_type), get_feature_type(bin_info->feature_type), get_layer_type(bin_info->operation_type), OS_NAME, bin_info->iothub_version, get_protocol_name(bin_info->iothub_protocol), bin_info->binary_size);
+    STRING_HANDLE binary_data = STRING_construct_sprintf(BINARY_SIZE_JSON_FMT, get_operation_type(bin_info->operation_type), get_feature_type(bin_info->feature_type), 
+        get_layer_type(bin_info->feature_type), OS_NAME, bin_info->iothub_version, get_protocol_name(bin_info->iothub_protocol), bin_info->binary_size);
     if (binary_data == NULL)
     {
         (void)printf("ERROR: Failed to allocate binary json\r\n");
@@ -158,7 +160,8 @@ void report_binary_sizes(const BINARY_INFO* bin_info)
 void record_memory_usage(const MEM_ANALYSIS_INFO* iot_mem_info)
 {
     // Construct json
-    STRING_HANDLE analysis_data = STRING_construct_sprintf(HEAP_ANALYSIS_JSON_FMT, get_operation_type(iot_mem_info->operation_type), get_layer_type(iot_mem_info->operation_type), OS_NAME, iot_mem_info->iothub_version, get_protocol_name(iot_mem_info->iothub_protocol), iot_mem_info->msg_sent, gballoc_getMaximumMemoryUsed(), gballoc_getCurrentMemoryUsed(), gballoc_getAllocationCount());
+    STRING_HANDLE analysis_data = STRING_construct_sprintf(HEAP_ANALYSIS_JSON_FMT, get_operation_type(iot_mem_info->operation_type), get_layer_type(iot_mem_info->feature_type), OS_NAME, 
+        iot_mem_info->iothub_version, get_protocol_name(iot_mem_info->iothub_protocol), iot_mem_info->msg_sent, gballoc_getMaximumMemoryUsed(), gballoc_getCurrentMemoryUsed(), gballoc_getAllocationCount());
     if (analysis_data == NULL)
     {
         (void)printf("ERROR: Failed to allocate memory json\r\n");
@@ -174,7 +177,8 @@ void record_memory_usage(const MEM_ANALYSIS_INFO* iot_mem_info)
 
 void record_network_usage(const MEM_ANALYSIS_INFO* iot_mem_info)
 {
-    STRING_HANDLE network_data = STRING_construct_sprintf(NETWORK_ANALYSIS_JSON_FMT, get_operation_type(iot_mem_info->operation_type), OS_NAME, iot_mem_info->iothub_version, get_protocol_name(iot_mem_info->iothub_protocol), iot_mem_info->msg_sent, gbnetwork_getBytesSent(), gbnetwork_getNumSends());
+    STRING_HANDLE network_data = STRING_construct_sprintf(NETWORK_ANALYSIS_JSON_FMT, get_operation_type(iot_mem_info->operation_type), OS_NAME, iot_mem_info->iothub_version, 
+        get_protocol_name(iot_mem_info->iothub_protocol), iot_mem_info->msg_sent, gbnetwork_getBytesSent(), (uint32_t)gbnetwork_getNumSends(), gbnetwork_getBytesRecv(), (uint32_t)gbnetwork_getNumRecv());
     if (network_data == NULL)
     {
         (void)printf("ERROR: Failed to allocate networking json\r\n");

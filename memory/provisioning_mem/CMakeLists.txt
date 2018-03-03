@@ -22,7 +22,7 @@ IF(WIN32)
 ENDIF(WIN32)
 
 add_definitions(-DUSE_PROVISIONING)
-add_definitions(-DGB_MEASURE_MEMORY_FOR_THIS -DGB_DEBUG_ALLOC)
+add_definitions(-DGB_MEASURE_MEMORY_FOR_THIS -DGB_DEBUG_ALLOC -DGB_DEBUG_NETWORK -DGB_MEASURE_NETWORK_FOR_THIS)
 
 include_directories(. .. ../..)
 include_directories(${SDK_INCLUDE_DIRS})
