@@ -10,7 +10,11 @@
 #elif USE_PROVISIONING
     #include "provisioning_mem.h"
 #elif USE_NETWORKING
-    #include "network_info.h"
+    #ifdef IOTHUB_CLIENT
+        #include "network_info.h"
+    #else
+        #include "prov_net_info.h"
+    #endif
 #endif
 
 #include "azure_c_shared_utility/connection_string_parser.h"
