@@ -187,21 +187,29 @@ static int construct_dev_conn_string(MEM_ANALYTIC_INFO* mem_info, CONNECTION_INF
     }
     else
     {
-        size_t alloc_len = strlen(mem_info->connection_string);
-        if ((conn_info->device_conn_string = malloc(alloc_len + 1)) == NULL)
+        if (mem_info->connection_string == NULL)
         {
-            (void)printf("Failure allocating device connection string\r\n");
-            result = __LINE__;
-        }
-        else if (strcpy(conn_info->device_conn_string, mem_info->connection_string) == 0)
-        {
-            (void)printf("Failure constructing device connection string\r\n");
-            free(conn_info->device_conn_string);
+            (void)printf("Failure setting connection string\r\n");
             result = __LINE__;
         }
         else
         {
-            result = 0;
+            size_t alloc_len = strlen(mem_info->connection_string);
+            if ((conn_info->device_conn_string = malloc(alloc_len + 1)) == NULL)
+            {
+                (void)printf("Failure allocating device connection string\r\n");
+                result = __LINE__;
+            }
+            else if (strcpy(conn_info->device_conn_string, mem_info->connection_string) == 0)
+            {
+                (void)printf("Failure constructing device connection string\r\n");
+                free(conn_info->device_conn_string);
+                result = __LINE__;
+            }
+            else
+            {
+                result = 0;
+            }
         }
     }
     return result;

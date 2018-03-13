@@ -30,6 +30,7 @@
 #include "../certs/certs.h"
 
 #define WAIT_TIME           2*1000
+static const char* const GLOBAL_PROV_URI = "global.azure-devices-provisioning.net";
 
 static const char* id_scope = "";
 
@@ -118,7 +119,7 @@ int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
             (void)printf("failed initializing operation\r\n");
             result = __LINE__;
         }
-        else if ((prov_device_handle = Prov_Device_LL_Create(conn_info->device_conn_string, conn_info->scope_id, prov_transport)) == NULL)
+        else if ((prov_device_handle = Prov_Device_LL_Create(GLOBAL_PROV_URI, conn_info->scope_id, prov_transport)) == NULL)
         {
             (void)printf("failed calling Prov_Device_Create\r\n");
             result = __LINE__;
@@ -181,7 +182,7 @@ int initiate_upper_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
             (void)printf("failed initializing operation\r\n");
             result = __LINE__;
         }
-        else if ((prov_device_handle = Prov_Device_Create(conn_info->device_conn_string, conn_info->scope_id, prov_transport)) == NULL)
+        else if ((prov_device_handle = Prov_Device_Create(GLOBAL_PROV_URI, conn_info->scope_id, prov_transport)) == NULL)
         {
             (void)printf("failed calling Prov_Device_Create\r\n");
             result = __LINE__;
