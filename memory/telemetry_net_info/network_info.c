@@ -208,7 +208,7 @@ int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
                 }
                 IoTHubClient_LL_Destroy(iothub_client);
 
-                record_network_usage(&iot_mem_info);
+                report_network_usage(&iot_mem_info);
             }
             tickcounter_destroy(tick_counter_handle);
         }

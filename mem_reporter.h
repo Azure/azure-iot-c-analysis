@@ -54,6 +54,13 @@ static const char* AMQP_WS_PROTOCOL_NAME = "AMQP WS PROTOCOL";
         OPERATION_BINARY_SIZE,
     } OPERATION_TYPE;
 
+    typedef enum REPORTER_TYPE_TAG
+    {
+        REPORTER_TYPE_JSON,
+        REPORTER_TYPE_CVS,
+        REPORTER_TYPE_MD,
+    } REPORTER_TYPE;
+
     typedef struct CONNECTION_INFO_TAG
     {
         char* device_conn_string;
@@ -79,9 +86,11 @@ static const char* AMQP_WS_PROTOCOL_NAME = "AMQP WS PROTOCOL";
         long binary_size;
     } BINARY_INFO;
 
-    extern void record_memory_usage(const MEM_ANALYSIS_INFO* iot_mem_info);
+    extern void report_initialize(REPORTER_TYPE type);
+    extern void report_deinitialize();
+    extern void report_memory_usage(const MEM_ANALYSIS_INFO* iot_mem_info);
     extern void report_binary_sizes(const BINARY_INFO* bin_info);
-    extern void record_network_usage(const MEM_ANALYSIS_INFO* iot_mem_info);
+    extern void report_network_usage(const MEM_ANALYSIS_INFO* iot_mem_info);
 
 #ifdef __cplusplus
 }

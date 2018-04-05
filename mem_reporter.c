@@ -23,10 +23,15 @@
 #define UPLOAD_TO_BLOB_IN_USE   1
 #endif
 
+static REPORTER_TYPE g_report_type = REPORTER_TYPE_JSON;
+
 static const char* const UNKNOWN_TYPE = "unknown";
 static const char* const NETWORK_ANALYSIS_JSON_FMT = "{ \"sdkAnalysis\": { \"dateTime\": \"%s\", \"opType\": \"%s\", \"feature\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgPayload\" : %d, \"sendBytes\" : %" PRIu64 ", \"numSends\" : %ld, \"recvBytes\" : %" PRIu64 ", \"numRecv\" : %ld } }";
+static const char* const NETWORK_ANALYSIS_CVS_FMT = "%s, %s, %s, %s, %s, %s, %d, %" PRIu64 ", %ld, %" PRIu64 ", %ld";
 static const char* const BINARY_SIZE_JSON_FMT = "{ \"sdkAnalysis\": { \"dateTime\": \"%s\", \"opType\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"binarySize\" : \"%ld\"} }";
+static const char* const BINARY_SIZE_CVS_FMT = "%s, %s, %s, %s, %s, %s, %s, %ld";
 static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"sdkAnalysis\": { \"dateTime\": \"%s\", \"opType\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgCount\" : %d, \"maxMemory\" : %zu, \"currMemory\" : %zu, \"numAlloc\" : %zu } }";
+static const char* const HEAP_ANALYSIS_CVS_FMT = "%s, %s, %s, %s, %s, %s, %s, %d, %zu, %zu, %zu";
 
 static void upload_to_azure(const char* data)
 {
@@ -121,7 +126,7 @@ static const char* get_feature_type(FEATURE_TYPE type)
         break;
     case FEATURE_PROVISIONING_LL:
     case FEATURE_PROVISIONING_UL:
-        result = "provisioning";
+        result = "dps";
         break;
     default:
         result = UNKNOWN_TYPE;
@@ -151,11 +156,65 @@ static const char* get_operation_type(OPERATION_TYPE type)
     return result;
 }
 
+static const char* get_format_value(OPERATION_TYPE type)
+{
+    const char* result;
+    switch (type)
+    {
+        case OPERATION_MEMORY:
+            if (g_report_type == REPORTER_TYPE_CVS)
+            {
+                result = HEAP_ANALYSIS_CVS_FMT;
+            }
+            else
+            {
+                result = HEAP_ANALYSIS_JSON_FMT;
+            }
+            break;
+        case OPERATION_NETWORK:
+            if (g_report_type == REPORTER_TYPE_CVS)
+            {
+                result = NETWORK_ANALYSIS_CVS_FMT;
+            }
+            else
+            {
+                result = NETWORK_ANALYSIS_JSON_FMT;
+            }
+            break;
+        case OPERATION_BINARY_SIZE:
+            if (g_report_type == REPORTER_TYPE_CVS)
+            {
+                result = BINARY_SIZE_CVS_FMT;
+            }
+            else
+            {
+                result = BINARY_SIZE_JSON_FMT;
+            }
+            break;
+        default:
+            result = UNKNOWN_TYPE;
+            break;
+    }
+    return result;
+}
+
+void report_initialize(REPORTER_TYPE type)
+{
+
+}
+
+void report_deinitialize()
+{
+
+}
+
 void report_binary_sizes(const BINARY_INFO* bin_info)
 {
     char date_time[DATE_TIME_LEN];
     get_report_date(date_time, DATE_TIME_LEN);
-    STRING_HANDLE binary_data = STRING_construct_sprintf(BINARY_SIZE_JSON_FMT, date_time, get_operation_type(bin_info->operation_type), get_feature_type(bin_info->feature_type),
+
+    const char* string_format = get_format_value(bin_info->operation_type);
+    STRING_HANDLE binary_data = STRING_construct_sprintf(string_format, date_time, get_operation_type(bin_info->operation_type), get_feature_type(bin_info->feature_type),
         get_layer_type(bin_info->feature_type), OS_NAME, bin_info->iothub_version, get_protocol_name(bin_info->iothub_protocol), bin_info->binary_size);
     if (binary_data == NULL)
     {
@@ -170,13 +229,13 @@ void report_binary_sizes(const BINARY_INFO* bin_info)
     }
 }
 
-void record_memory_usage(const MEM_ANALYSIS_INFO* iot_mem_info)
+void report_memory_usage(const MEM_ANALYSIS_INFO* iot_mem_info)
 {
     char date_time[DATE_TIME_LEN];
     get_report_date(date_time, DATE_TIME_LEN);
 
-    // Construct json
-    STRING_HANDLE analysis_data = STRING_construct_sprintf(HEAP_ANALYSIS_JSON_FMT, date_time, get_operation_type(iot_mem_info->operation_type), get_feature_type(iot_mem_info->feature_type), get_layer_type(iot_mem_info->feature_type), OS_NAME,
+    const char* string_format = get_format_value(iot_mem_info->operation_type);
+    STRING_HANDLE analysis_data = STRING_construct_sprintf(string_format, date_time, get_operation_type(iot_mem_info->operation_type), get_feature_type(iot_mem_info->feature_type), get_layer_type(iot_mem_info->feature_type), OS_NAME,
         iot_mem_info->iothub_version, get_protocol_name(iot_mem_info->iothub_protocol), iot_mem_info->msg_sent, gballoc_getMaximumMemoryUsed(), gballoc_getCurrentMemoryUsed(), gballoc_getAllocationCount());
     if (analysis_data == NULL)
     {
@@ -191,7 +250,7 @@ void record_memory_usage(const MEM_ANALYSIS_INFO* iot_mem_info)
     }
 }
 
-void record_network_usage(const MEM_ANALYSIS_INFO* iot_mem_info)
+void report_network_usage(const MEM_ANALYSIS_INFO* iot_mem_info)
 {
     char date_time[DATE_TIME_LEN];
     get_report_date(date_time, DATE_TIME_LEN);

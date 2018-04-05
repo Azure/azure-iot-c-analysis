@@ -146,7 +146,7 @@ int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
         }
         prov_dev_security_deinit();
 
-        record_memory_usage(&prov_mem_info);
+        report_memory_usage(&prov_mem_info);
     }
     return result;
 }
@@ -207,7 +207,7 @@ int initiate_upper_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
             Prov_Device_Destroy(prov_device_handle);
         }
         prov_dev_security_deinit();
-        record_memory_usage(&prov_mem_info);
+        report_memory_usage(&prov_mem_info);
     }
     return result;
 }

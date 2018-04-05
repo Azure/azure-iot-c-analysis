@@ -147,7 +147,7 @@ int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
         }
         prov_dev_security_deinit();
 
-        record_network_usage(&prov_mem_info);
+        report_network_usage(&prov_mem_info);
     }
     return result;
 }

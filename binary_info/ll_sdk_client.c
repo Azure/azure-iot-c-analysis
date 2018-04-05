@@ -38,8 +38,6 @@ static const char* connectionString = "HostName=<hostname>;DeviceId=<deviceId>;S
 #define MESSAGE_COUNT        1
 static bool g_continueRunning = true;
 static size_t g_message_count_send_confirmations = 0;
-DEFINE_ENUM_STRINGS(IOTHUB_CLIENT_CONNECTION_STATUS, IOTHUB_CLIENT_CONNECTION_STATUS_VALUES);
-DEFINE_ENUM_STRINGS(IOTHUB_CLIENT_CONNECTION_STATUS_REASON, IOTHUB_CLIENT_CONNECTION_STATUS_REASON_VALUES);
 
 static void send_confirm_callback(IOTHUB_CLIENT_CONFIRMATION_RESULT result, void* userContextCallback)
 {

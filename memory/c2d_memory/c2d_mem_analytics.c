@@ -182,7 +182,7 @@ int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
 
             IoTHubClient_LL_Destroy(iothub_client);
 
-            record_memory_usage(&iot_mem_info);
+            report_memory_usage(&iot_mem_info);
         }
     }
     return result;
@@ -255,7 +255,7 @@ int initiate_upper_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
 
             IoTHubClient_Destroy(iothub_client);
 
-            record_memory_usage(&iot_mem_info);
+            report_memory_usage(&iot_mem_info);
         }
     }
     return result;
