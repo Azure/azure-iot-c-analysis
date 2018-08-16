@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "azure_c_shared_utility/strings.h"
 #include "mem_reporter.h"

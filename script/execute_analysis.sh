@@ -28,6 +28,9 @@ let VSPACE=${MEMAR[0]}+${MEMAR[1]}
 
 make --jobs=$CORES
 
+# Run strip from the binaries
+./binary_info/lower_layer/
+
 # Run the analysis applications
 ./binary_info/binary_info -c $cmake_folder
 ./memory/telemetry_memory/telemetry_memory -c $IOTHUB_CONNECTION_STRING
