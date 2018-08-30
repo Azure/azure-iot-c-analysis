@@ -33,7 +33,7 @@
 
 /* String containing Hostname, Device Id & Device Key in the format:                         */
 /* Paste in the your iothub connection string  */
-static const char* connectionString = "HostName=<hostname>;DeviceId=<deviceId>;SharedAccessKey=<shared_access_key>";
+static const char* connectionString = "";
 
 #define MESSAGE_COUNT        1
 static bool g_continueRunning = true;
@@ -65,6 +65,12 @@ int main(void)
     IOTHUB_MESSAGE_HANDLE message_handle;
     size_t messages_sent = 0;
     const char* telemetry_msg = "test_message";
+
+    if (strlen(connectionString) == 0)
+    {
+        // Attempt to get the connection string from the environment
+        connectionString = getenv("IOTHUB_CONNECTION_STRING");
+    }
 
     // Select the Protocol to use with the connection
 #ifdef USE_AMQP
