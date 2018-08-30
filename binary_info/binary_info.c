@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "azure_c_shared_utility/strings.h"
 #include "mem_reporter.h"
@@ -21,11 +22,11 @@
     static const char* BINARY_UL_PATH_FMT = "%s/binary_info/upper_layer/%s%s_%s/%s%s_%s%s";
 #endif
 
-static const char* const MQTT_BINARY_NAME = "mqtt_transport";
-static const char* const MQTT_WS_BINARY_NAME = "mqtt_ws_transport";
-static const char* const AMQP_BINARY_NAME = "amqp_transport";
-static const char* const AMQP_WS_BINARY_NAME = "amqp_ws_transport";
-static const char* const HTTP_BINARY_NAME = "http_transport";
+    static const char* const MQTT_BINARY_NAME = "mqtt_transport";
+    static const char* const MQTT_WS_BINARY_NAME = "mqtt_ws_transport";
+    static const char* const AMQP_BINARY_NAME = "amqp_transport";
+    static const char* const AMQP_WS_BINARY_NAME = "amqp_ws_transport";
+    static const char* const HTTP_BINARY_NAME = "http_transport";
 
 static const char* const PROV_BINARY_NAME = "prov_";
 
@@ -35,7 +36,8 @@ static const char* LOWER_LAYER_SUFFIX = "ll";
 typedef enum ARGUEMENT_TYPE_TAG
 {
     ARGUEMENT_TYPE_UNKNOWN,
-    ARGUEMENT_TYPE_CMAKE_DIR
+    ARGUEMENT_TYPE_CMAKE_DIR,
+    ARGUEMENT_TYPE_OUTPUT_FILE
 } ARGUEMENT_TYPE;
 
 static const char* get_binary_file(PROTOCOL_TYPE type)
@@ -157,6 +159,10 @@ static int parse_command_line(int argc, char* argv[], BINARY_INFO* bin_info)
             {
                 argument_type = ARGUEMENT_TYPE_CMAKE_DIR;
             }
+            else if (argv[index][0] == '-' && (argv[index][1] == 'o' || argv[index][1] == 'O'))
+            {
+                argument_type = ARGUEMENT_TYPE_OUTPUT_FILE;
+            }
         }
         else
         {
@@ -164,6 +170,9 @@ static int parse_command_line(int argc, char* argv[], BINARY_INFO* bin_info)
             {
             case ARGUEMENT_TYPE_CMAKE_DIR:
                 bin_info->cmake_dir = argv[index];
+                break;
+            case ARGUEMENT_TYPE_OUTPUT_FILE:
+                bin_info->output_file = argv[index];
                 break;
             case ARGUEMENT_TYPE_UNKNOWN:
             default:
@@ -197,18 +206,30 @@ int main(int argc, char* argv[])
         bin_info.operation_type = OPERATION_BINARY_SIZE;
         bin_info.iothub_version = IoTHubClient_GetVersionString();
         bin_info.feature_type = FEATURE_TELEMETRY_LL;
+#ifdef USE_MQTT
         (void)calculate_filesize(&bin_info, PROTOCOL_MQTT, BINARY_LL_PATH_FMT);
         (void)calculate_filesize(&bin_info, PROTOCOL_MQTT_WS, BINARY_LL_PATH_FMT);
+#endif
+#ifdef USE_HTTP
         (void)calculate_filesize(&bin_info, PROTOCOL_HTTP, BINARY_LL_PATH_FMT);
+#endif
+#ifdef USE_AMQP
         (void)calculate_filesize(&bin_info, PROTOCOL_AMQP, BINARY_LL_PATH_FMT);
         (void)calculate_filesize(&bin_info, PROTOCOL_AMQP_WS, BINARY_LL_PATH_FMT);
+#endif
 
         bin_info.feature_type = FEATURE_TELEMETRY_UL;
+#ifdef USE_MQTT
         (void)calculate_filesize(&bin_info, PROTOCOL_MQTT, BINARY_UL_PATH_FMT);
         (void)calculate_filesize(&bin_info, PROTOCOL_MQTT_WS, BINARY_UL_PATH_FMT);
+#endif
+#ifdef USE_HTTP
         (void)calculate_filesize(&bin_info, PROTOCOL_HTTP, BINARY_UL_PATH_FMT);
         (void)calculate_filesize(&bin_info, PROTOCOL_AMQP, BINARY_UL_PATH_FMT);
+#endif
+#ifdef USE_AMQP
         (void)calculate_filesize(&bin_info, PROTOCOL_AMQP_WS, BINARY_UL_PATH_FMT);
+#endif
 
 #ifdef USE_PROVISIONING_CLIENT
         bin_info.iothub_version = Prov_Device_GetVersionString();

@@ -200,12 +200,14 @@ static const char* get_format_value(OPERATION_TYPE type)
 
 void report_initialize(REPORTER_TYPE type)
 {
+    g_report_type = type;
 
+    // Open the file
 }
 
 void report_deinitialize()
 {
-
+    // Close the file
 }
 
 void report_binary_sizes(const BINARY_INFO* bin_info)

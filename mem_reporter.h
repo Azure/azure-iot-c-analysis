@@ -84,6 +84,7 @@ static const char* AMQP_WS_PROTOCOL_NAME = "AMQP WS PROTOCOL";
         FEATURE_TYPE feature_type;
         const char* cmake_dir;
         long binary_size;
+        const char* output_file;
     } BINARY_INFO;
 
     extern void report_initialize(REPORTER_TYPE type);

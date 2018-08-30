@@ -1,0 +1,6 @@
+SDK Without Diagnostic
+{ "sdkAnalysis": { "dateTime": "8-30-2018", "opType": "binSize", "feature": "d2c", "layer": "lower layer", "OS": "Linux", "version": "1.2.8", "transport" : "MQTT PROTOCOL", "binarySize" : "387776"} }
+{ "sdkAnalysis": { "dateTime": "8-30-2018", "opType": "binSize", "feature": "d2c", "layer": "lower layer", "OS": "Linux", "version": "1.2.8", "transport" : "MQTT WS PROTOCOL", "binarySize" : "439008"} }
+{ "sdkAnalysis": { "dateTime": "8-30-2018", "opType": "binSize", "feature": "d2c", "layer": "upper layer", "OS": "Linux", "version": "1.2.8", "transport" : "MQTT PROTOCOL", "binarySize" : "420384"} }
+{ "sdkAnalysis": { "dateTime": "8-30-2018", "opType": "binSize", "feature": "d2c", "layer": "upper layer", "OS": "Linux", "version": "1.2.8", "transport" : "MQTT WS PROTOCOL", "binarySize" : "475704"} }
+

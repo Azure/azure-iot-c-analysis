@@ -8,7 +8,13 @@ include("configs/analysisFunctions.cmake")
 
 set(TARGET_GIT_BRANCH "master" CACHE STRING "Branch of the SDK repo to target`")
 
+set(use_mqtt ON)
+set(use_amqp OFF)
+set(use_http OFF)
+set(use_prov_client OFF)
+
 option(not_using_blob_upload "use http upload to blob" ON)
+option(refresh_sdk "get the latest sdk" OFF)
 
 if(WIN32)
     option(use_openssl "set use_openssl to ON if openssl is to be used, set to OFF to not use openssl" OFF)
@@ -27,11 +33,17 @@ message("Generated with config types: ${CMAKE_CONFIGURATION_TYPES}")
 #set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Wall")
 #set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall")
 
+set(load_sdk_branch "")
+
 # Check out Git submodules.
 if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk/.gitmodules")
     message("running git clone of the c-sdk into ${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk")
     execute_process (COMMAND git clone https://github.com/Azure/azure-iot-sdk-c.git --recursive ${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk)
     #execute_process (COMMAND git submodule update --init --recursive WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+else()
+    if (${refresh_sdk})
+        execute_process (COMMAND git pull origin master WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk")
+    endif()
 endif()
 
 set(memory_trace ON)
@@ -43,8 +55,10 @@ set(SDK_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/deps/c-sdk/iothub_client/inc
     ${CMAKE_SOURCE_DIR}/deps/c-sdk/iothub_service_client/inc
     ${CMAKE_SOURCE_DIR}/deps/c-sdk/c-utility/inc
-    ${CMAKE_SOURCE_DIR}/deps/c-sdk/provisioning_client/inc
+    if (${use_prov_client})
+        ${CMAKE_SOURCE_DIR}/deps/c-sdk/provisioning_client/inc
+    endif(${use_prov_client})
 )
 
-add_subdirectory(memory)
+#add_subdirectory(memory)
 add_analytic_directory(binary_info "binary_info")
