@@ -12,8 +12,9 @@ set(use_mqtt ON)
 set(use_amqp OFF)
 set(use_http OFF)
 set(use_prov_client OFF)
+set(dont_use_uploadtoblob ON)
+set(sdk_branch "master" CACHE STRING "The branch of the sdk")
 
-option(not_using_blob_upload "use http upload to blob" ON)
 option(refresh_sdk "get the latest sdk" OFF)
 
 if(WIN32)
@@ -33,16 +34,15 @@ message("Generated with config types: ${CMAKE_CONFIGURATION_TYPES}")
 #set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Wall")
 #set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall")
 
-set(load_sdk_branch "")
-
 # Check out Git submodules.
 if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk/.gitmodules")
     message("running git clone of the c-sdk into ${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk")
-    execute_process (COMMAND git clone https://github.com/Azure/azure-iot-sdk-c.git --recursive ${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk)
-    #execute_process (COMMAND git submodule update --init --recursive WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    execute_process (COMMAND git clone https://github.com/Azure/azure-iot-sdk-c.git --recursive -b ${sdk_branch} ${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk)
 else()
     if (${refresh_sdk})
-        execute_process (COMMAND git pull origin master WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk")
+        execute_process (COMMAND git pull origin ${sdk_branch} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk")
+        # Turn off refresh so it doesn't refresh everytime
+        set(refresh_sdk OFF CACHE BOOL "" FORCE)
     endif()
 endif()
 
@@ -52,13 +52,20 @@ set(skip_samples ON)
 add_subdirectory(deps/c-sdk)
 
 set(SDK_INCLUDE_DIRS 
+    ${CMAKE_SOURCE_DIR}/deps/c-sdk/certs
     ${CMAKE_SOURCE_DIR}/deps/c-sdk/iothub_client/inc
     ${CMAKE_SOURCE_DIR}/deps/c-sdk/iothub_service_client/inc
     ${CMAKE_SOURCE_DIR}/deps/c-sdk/c-utility/inc
-    if (${use_prov_client})
-        ${CMAKE_SOURCE_DIR}/deps/c-sdk/provisioning_client/inc
-    endif(${use_prov_client})
 )
+if (${use_prov_client})
+    set(SDK_INCLUDE_DIRS ${SDK_INCLUDE_DIRS}
+        ${CMAKE_SOURCE_DIR}/deps/c-sdk/provisioning_client/inc)
+endif()
+
+set(SDK_CERT_INCLUDE_DIRS 
+    ${CMAKE_SOURCE_DIR}/deps/c-sdk/certs
+)
+set(REPORTER_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 #add_subdirectory(memory)
 add_analytic_directory(binary_info "binary_info")

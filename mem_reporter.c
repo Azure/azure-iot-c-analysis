@@ -12,6 +12,8 @@
 #include "azure_c_shared_utility/strings.h"
 #include "azure_c_shared_utility/agenttime.h"
 
+#include "parson.h"
+
 #define USE_MSG_BYTE_ARRAY  1
 #define MESSAGES_TO_USE     1
 #define MAX_DATA_LEN        128
@@ -26,12 +28,19 @@
 static REPORTER_TYPE g_report_type = REPORTER_TYPE_JSON;
 
 static const char* const UNKNOWN_TYPE = "unknown";
+static const char* const SDK_ANALYSIS_NODE = "sdkAnalysis";
 static const char* const NETWORK_ANALYSIS_JSON_FMT = "{ \"sdkAnalysis\": { \"dateTime\": \"%s\", \"opType\": \"%s\", \"feature\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgPayload\" : %d, \"sendBytes\" : %" PRIu64 ", \"numSends\" : %ld, \"recvBytes\" : %" PRIu64 ", \"numRecv\" : %ld } }";
 static const char* const NETWORK_ANALYSIS_CVS_FMT = "%s, %s, %s, %s, %s, %s, %d, %" PRIu64 ", %ld, %" PRIu64 ", %ld";
 static const char* const BINARY_SIZE_JSON_FMT = "{ \"sdkAnalysis\": { \"dateTime\": \"%s\", \"opType\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"binarySize\" : \"%ld\"} }";
 static const char* const BINARY_SIZE_CVS_FMT = "%s, %s, %s, %s, %s, %s, %s, %ld";
 static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"sdkAnalysis\": { \"dateTime\": \"%s\", \"opType\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgCount\" : %d, \"maxMemory\" : %zu, \"currMemory\" : %zu, \"numAlloc\" : %zu } }";
 static const char* const HEAP_ANALYSIS_CVS_FMT = "%s, %s, %s, %s, %s, %s, %s, %d, %zu, %zu, %zu";
+
+typedef struct REPORT_INFO_TAG
+{
+    REPORTER_TYPE type;
+    JSON_Value* root_value;
+} REPORT_INFO;
 
 static void upload_to_azure(const char* data)
 {
@@ -198,19 +207,30 @@ static const char* get_format_value(OPERATION_TYPE type)
     return result;
 }
 
-void report_initialize(REPORTER_TYPE type)
+REPORT_HANDLE report_initialize(REPORTER_TYPE type)
 {
-    g_report_type = type;
-
-    // Open the file
+    REPORT_INFO* result;
+    if ((result = (REPORT_INFO*)malloc(sizeof(REPORT_INFO))) == NULL)
+    {
+        // Report failure
+    }
+    else
+    {
+        result->type = type;
+    }
+    return result;
 }
 
-void report_deinitialize()
+void report_deinitialize(REPORT_HANDLE handle)
 {
     // Close the file
+    if (handle == NULL)
+    {
+        free(handle);
+    }
 }
 
-void report_binary_sizes(const BINARY_INFO* bin_info)
+void report_binary_sizes(REPORT_HANDLE handle, const BINARY_INFO* bin_info)
 {
     char date_time[DATE_TIME_LEN];
     get_report_date(date_time, DATE_TIME_LEN);
@@ -271,4 +291,10 @@ void report_network_usage(const MEM_ANALYSIS_INFO* iot_mem_info)
         STRING_delete(network_data);
     }
 
+}
+
+bool report_write(REPORT_HANDLE handle)
+{
+    bool result;
+    return result;
 }

@@ -8,6 +8,7 @@
 #include <cstddef>
 extern "C" {
 #else
+#include <stdbool.h>
 #include <stddef.h>
 #endif
 
@@ -16,6 +17,8 @@ static const char* MQTT_WS_PROTOCOL_NAME = "MQTT WS PROTOCOL";
 static const char* HTTP_PROTOCOL_NAME = "HTTP PROTOCOL";
 static const char* AMQP_PROTOCOL_NAME = "AMQP PROTOCOL";
 static const char* AMQP_WS_PROTOCOL_NAME = "AMQP WS PROTOCOL";
+
+typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
 
 #ifdef WIN32
     static const char* OS_NAME = "Windows";
@@ -87,11 +90,14 @@ static const char* AMQP_WS_PROTOCOL_NAME = "AMQP WS PROTOCOL";
         const char* output_file;
     } BINARY_INFO;
 
-    extern void report_initialize(REPORTER_TYPE type);
-    extern void report_deinitialize();
+    extern REPORT_HANDLE report_initialize(REPORTER_TYPE type);
+    extern void report_deinitialize(REPORT_HANDLE handle);
+    
     extern void report_memory_usage(const MEM_ANALYSIS_INFO* iot_mem_info);
-    extern void report_binary_sizes(const BINARY_INFO* bin_info);
+    extern void report_binary_sizes(REPORT_HANDLE handle, const BINARY_INFO* bin_info);
     extern void report_network_usage(const MEM_ANALYSIS_INFO* iot_mem_info);
+
+    extern bool report_write(REPORT_HANDLE handle);
 
 #ifdef __cplusplus
 }

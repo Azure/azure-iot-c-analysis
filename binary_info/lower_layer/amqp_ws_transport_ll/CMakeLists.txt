@@ -5,7 +5,7 @@ compileAsC99()
 
 set(iothub_c_files
     ../../ll_sdk_client.c
-    ${PROJECT_SOURCE_DIR}/certs/certs.c
+    ${SDK_CERT_INCLUDE_DIRS}/certs.c
 )
 
 IF(WIN32)
@@ -13,9 +13,8 @@ IF(WIN32)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 ENDIF(WIN32)
 
-include_directories(${PROJECT_SOURCE_DIR}/certs)
-
-include_directories(.. ../..)
+include_directories(${SDK_CERT_INCLUDE_DIRS})
+include_directories(${BINARY_SOURCE_DIR} ${REPORTER_DIR})
 
 add_executable(amqp_ws_transport_ll ${iothub_c_files})
 target_link_libraries(amqp_ws_transport_ll iothub_client)

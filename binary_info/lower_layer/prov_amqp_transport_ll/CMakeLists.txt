@@ -15,7 +15,8 @@ ENDIF(WIN32)
 
 include_directories(${PROJECT_SOURCE_DIR}/certs ${PROJECT_SOURCE_DIR}/provisioning_client/inc)
 
-include_directories(.. ../.. )
+include_directories(${SDK_CERT_INCLUDE_DIRS})
+include_directories(${BINARY_SOURCE_DIR} ${REPORTER_DIR})
 
 add_executable(prov_amqp_transport_ll ${iothub_c_files})
 target_link_libraries(prov_amqp_transport_ll prov_device_ll_client)

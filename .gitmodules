@@ -1,3 +1,6 @@
 [submodule "deps/c-sdk"]
 	path = deps/c-sdk
 	url = https://github.com/Azure/azure-iot-sdk-c.git
+[submodule "deps/parson"]
+	path = deps/parson
+	url = https://github.com/kgabis/parson.git

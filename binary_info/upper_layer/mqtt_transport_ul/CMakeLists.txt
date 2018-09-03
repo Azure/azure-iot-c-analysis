@@ -13,9 +13,8 @@ IF(WIN32)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 ENDIF(WIN32)
 
-include_directories(${PROJECT_SOURCE_DIR}/certs)
-
-include_directories(.. ../..)
+include_directories(${SDK_CERT_INCLUDE_DIRS})
+include_directories(${BINARY_SOURCE_DIR} ${REPORTER_DIR})
 
 add_executable(mqtt_transport_ul ${iothub_c_files})
 target_link_libraries(mqtt_transport_ul iothub_client)

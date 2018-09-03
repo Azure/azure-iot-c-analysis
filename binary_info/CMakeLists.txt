@@ -3,11 +3,13 @@
 
 set(binary_info_c_files
     binary_info.c
-    ../mem_reporter.c
+    ${REPORTER_DIR}/mem_reporter.c
+    ${REPORTER_DIR}/deps/parson/parson.c
 )
 
 set(binary_info_h_files
-    ../mem_reporter.h
+    ${REPORTER_DIR}/mem_reporter.h
+    ${REPORTER_DIR}/deps/parson/parson.h
 )
 
 IF(WIN32)
@@ -29,8 +31,9 @@ if (${use_prov_client})
     add_definitions(-DUSE_PROVISIONING_CLIENT)
 endif()
 
-include_directories(. ..)
+include_directories(${CMAKE_CURRENT_LIST_DIR} ${REPORTER_DIR} ${REPORTER_DIR}/deps/parson)
 include_directories(${SDK_INCLUDE_DIRS})
+set(BINARY_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 add_executable(binary_info ${binary_info_c_files} ${binary_info_h_files})
 target_link_libraries(binary_info aziotsharedutil iothub_client)
