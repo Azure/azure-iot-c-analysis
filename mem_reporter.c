@@ -18,6 +18,7 @@
 #define MESSAGES_TO_USE     1
 #define MAX_DATA_LEN        128
 #define DATE_TIME_LEN       64
+#define FORMAT_MAX_LEN      64
 
 #ifdef DONT_USE_UPLOADTOBLOB
 #define UPLOAD_TO_BLOB_IN_USE   0
@@ -28,11 +29,18 @@
 static REPORTER_TYPE g_report_type = REPORTER_TYPE_JSON;
 
 static const char* const UNKNOWN_TYPE = "unknown";
-static const char* const SDK_ANALYSIS_NODE = "sdkAnalysis";
-static const char* const NETWORK_ANALYSIS_JSON_FMT = "{ \"sdkAnalysis\": { \"dateTime\": \"%s\", \"opType\": \"%s\", \"feature\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgPayload\" : %d, \"sendBytes\" : %" PRIu64 ", \"numSends\" : %ld, \"recvBytes\" : %" PRIu64 ", \"numRecv\" : %ld } }";
+static const char* const NODE_SDK_ANALYSIS = "sdkAnalysis";
+static const char* const NODE_BASE_ARRAY = "analysisItem";
+static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"sdkAnalysis\" : { \"osType\": \"%s\", \"analysisItem\" : [] } }";
+static const char* const NODE_OPERATING_SYSTEM = "osType";
+
+static const char* const NETWORK_ANALYSIS_JSON_FMT = "{ \"type\": \"ROM\", \"dateTime\": \"%s\", \"opType\": \"%s\", \"feature\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgPayload\" : %d, \"sendBytes\" : %" PRIu64 ", \"numSends\" : %ld, \"recvBytes\" : %" PRIu64 ", \"numRecv\" : %ld } }";
 static const char* const NETWORK_ANALYSIS_CVS_FMT = "%s, %s, %s, %s, %s, %s, %d, %" PRIu64 ", %ld, %" PRIu64 ", %ld";
-static const char* const BINARY_SIZE_JSON_FMT = "{ \"sdkAnalysis\": { \"dateTime\": \"%s\", \"opType\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"binarySize\" : \"%ld\"} }";
+
+static const char* const BINARY_SIZE_JSON_FMT = "{ \"type\": \"ROM\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"binarySize\" : \"%ld\" }";
+
 static const char* const BINARY_SIZE_CVS_FMT = "%s, %s, %s, %s, %s, %s, %s, %ld";
+
 static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"sdkAnalysis\": { \"dateTime\": \"%s\", \"opType\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgCount\" : %d, \"maxMemory\" : %zu, \"currMemory\" : %zu, \"numAlloc\" : %zu } }";
 static const char* const HEAP_ANALYSIS_CVS_FMT = "%s, %s, %s, %s, %s, %s, %s, %d, %zu, %zu, %zu";
 
@@ -40,7 +48,30 @@ typedef struct REPORT_INFO_TAG
 {
     REPORTER_TYPE type;
     JSON_Value* root_value;
+    JSON_Object* analysis_node;
 } REPORT_INFO;
+
+static void format_bytes(long bytes, char formatting[FORMAT_MAX_LEN])
+{
+    char temp[FORMAT_MAX_LEN];
+    sprintf(temp, "%ld", bytes);
+    memset(formatting, 0, FORMAT_MAX_LEN);
+
+    size_t length = strlen(temp);
+    size_t cntr = 0;
+    size_t extra_char = length / 3;
+    for (int index = length-1; index >= 0; index--, cntr++)
+    {
+        if (cntr >= 3)
+        {
+            formatting[index + extra_char] = ',';
+            extra_char--;
+            cntr = 0;
+        }
+        formatting[index + extra_char] = temp[index];
+    }
+
+}
 
 static void upload_to_azure(const char* data)
 {
@@ -216,7 +247,43 @@ REPORT_HANDLE report_initialize(REPORTER_TYPE type)
     }
     else
     {
+        //JSON_Object* json_object;
         result->type = type;
+        if (result->type == REPORTER_TYPE_JSON)
+        {
+            STRING_HANDLE json_node = STRING_construct_sprintf(SDK_ANALYSIS_EMPTY_NODE, OS_NAME);
+            if (json_node == NULL)
+            {
+                (void)printf("Failure creating Analysis node");
+                free(result);
+                result = NULL;
+            }
+            else
+            {
+                result->root_value = json_parse_string(STRING_c_str(json_node));
+                if (result->root_value == NULL)
+                {
+                    (void)printf("Failure parsing value node");
+                    free(result);
+                    result = NULL;
+                }
+                else if ((result->analysis_node = json_value_get_object(result->root_value)) == NULL)
+                {
+                    (void)printf("Failure getting value node");
+                    free(result);
+                    result = NULL;
+                }
+                /*else
+                {
+                    char* test = json_serialize_to_string_pretty(result->root_value);
+                    (void)printf("Debug:\r\n%s\r\n", test);
+                }*/
+            }
+            STRING_delete(json_node);
+        }
+        else
+        {
+        }
     }
     return result;
 }
@@ -224,30 +291,61 @@ REPORT_HANDLE report_initialize(REPORTER_TYPE type)
 void report_deinitialize(REPORT_HANDLE handle)
 {
     // Close the file
-    if (handle == NULL)
+    if (handle != NULL)
     {
+        json_value_free(handle->root_value);
         free(handle);
     }
 }
 
 void report_binary_sizes(REPORT_HANDLE handle, const BINARY_INFO* bin_info)
 {
-    char date_time[DATE_TIME_LEN];
-    get_report_date(date_time, DATE_TIME_LEN);
+    if (handle != NULL)
+    {
+        JSON_Value* rom_size_node;
+        char date_time[DATE_TIME_LEN];
+        char byte_formatted[FORMAT_MAX_LEN];
+        get_report_date(date_time, DATE_TIME_LEN);
+        format_bytes(bin_info->binary_size, byte_formatted);
 
-    const char* string_format = get_format_value(bin_info->operation_type);
-    STRING_HANDLE binary_data = STRING_construct_sprintf(string_format, date_time, get_operation_type(bin_info->operation_type), get_feature_type(bin_info->feature_type),
-        get_layer_type(bin_info->feature_type), OS_NAME, bin_info->iothub_version, get_protocol_name(bin_info->iothub_protocol), bin_info->binary_size);
-    if (binary_data == NULL)
-    {
-        (void)printf("ERROR: Failed to allocate binary json\r\n");
-    }
-    else
-    {
-        (void)printf("%s\r\n", STRING_c_str(binary_data));
-        ThreadAPI_Sleep(10);
-        upload_to_azure(STRING_c_str(binary_data));
-        STRING_delete(binary_data);
+        STRING_HANDLE binary_data = STRING_construct_sprintf(BINARY_SIZE_JSON_FMT, date_time, get_feature_type(bin_info->feature_type),
+            get_layer_type(bin_info->feature_type), bin_info->iothub_version, get_protocol_name(bin_info->iothub_protocol), byte_formatted);
+        if (binary_data == NULL)
+        {
+            (void)printf("ERROR: Failed to allocate binary json\r\n");
+        }
+        else
+        {
+            if ((rom_size_node = json_parse_string(STRING_c_str(binary_data))) != NULL)
+            {
+                JSON_Object* json_object;
+                JSON_Array* base_array;
+                JSON_Value* json_analysis;
+
+                if ((json_analysis = json_object_get_value(handle->analysis_node, NODE_SDK_ANALYSIS)) == NULL)
+                {
+                    (void)printf("ERROR: Failed getting node object value\r\n");
+                }
+                else if ((json_object = json_value_get_object(json_analysis)) == NULL)
+                {
+                    (void)printf("ERROR: Failed getting object value\r\n");
+                }
+                else if ((base_array = json_object_get_array(json_object, NODE_BASE_ARRAY)) == NULL)
+                {
+                    (void)printf("ERROR: Failed getting object value\r\n");
+                }
+                else
+                {
+                    if (json_array_append_value(base_array, rom_size_node) != JSONSuccess)
+                    {
+                        (void)printf("ERROR: Failed to allocate binary json\r\n");
+
+                    }
+                }
+                //json_value_free(rom_size_node);
+            }
+            STRING_delete(binary_data);
+        }
     }
 }
 
@@ -296,5 +394,16 @@ void report_network_usage(const MEM_ANALYSIS_INFO* iot_mem_info)
 bool report_write(REPORT_HANDLE handle)
 {
     bool result;
+    if (handle == NULL)
+    {
+        result = false;
+    }
+    else
+    {
+        char* test = json_serialize_to_string_pretty(handle->root_value);
+        (void)printf("Debug:\r\n%s\r\n", test);
+        json_free_serialized_string(test);
+        result = true;
+    }
     return result;
 }

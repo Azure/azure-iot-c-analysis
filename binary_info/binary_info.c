@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+#include <vld.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -253,7 +254,9 @@ int main(int argc, char* argv[])
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP, BINARY_UL_PATH_FMT);
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP_WS, BINARY_UL_PATH_FMT);
 #endif
+        report_write(report_handle);
 
+        report_deinitialize(report_handle);
         result = 0;
     }
 

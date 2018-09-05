@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "iothub_client.h"
 #include "iothub_message.h"
@@ -66,12 +67,6 @@ int main(void)
     size_t messages_sent = 0;
     const char* telemetry_msg = "test_message";
 
-    if (strlen(connectionString) == 0)
-    {
-        // Attempt to get the connection string from the environment
-        connectionString = getenv("IOTHUB_CONNECTION_STRING");
-    }
-
     // Select the Protocol to use with the connection
 #ifdef USE_AMQP
     #ifdef USE_WEB_SOCKETS
@@ -98,57 +93,62 @@ int main(void)
     (void)printf("Creating IoTHub handle\r\n");
     // Create the iothub handle here
     iothub_ll_handle = IoTHubClient_LL_CreateFromConnectionString(connectionString, protocol);
-
-    // Set any option that are neccessary.
-    // For available options please see the iothub_sdk_options.md documentation
-    bool traceOn = true;
-    IoTHubClient_LL_SetOption(iothub_ll_handle, OPTION_LOG_TRACE, &traceOn);
-    // Setting the Trusted Certificate.  This is only necessary on system with without
-    // built in certificate stores.
-    IoTHubClient_LL_SetOption(iothub_ll_handle, OPTION_TRUSTED_CERT, certificates);
-
-    (void)IoTHubClient_LL_SetConnectionStatusCallback(iothub_ll_handle, iothub_connection_status, NULL);
-
-    gballoc_init();
-    do
+    if (iothub_ll_handle == NULL)
     {
-        if (messages_sent < MESSAGE_COUNT)
+        (void)printf("Failure creating iothub handle");
+    }
+    else
+    {
+        // Set any option that are neccessary.
+        // For available options please see the iothub_sdk_options.md documentation
+        bool traceOn = true;
+        IoTHubClient_LL_SetOption(iothub_ll_handle, OPTION_LOG_TRACE, &traceOn);
+        // Setting the Trusted Certificate.  This is only necessary on system with without
+        // built in certificate stores.
+        IoTHubClient_LL_SetOption(iothub_ll_handle, OPTION_TRUSTED_CERT, certificates);
+
+        (void)IoTHubClient_LL_SetConnectionStatusCallback(iothub_ll_handle, iothub_connection_status, NULL);
+
+        gballoc_init();
+        do
         {
-            // Construct the iothub message from a string or a byte array
-            message_handle = IoTHubMessage_CreateFromString(telemetry_msg);
-            //message_handle = IoTHubMessage_CreateFromByteArray((const unsigned char*)msgText, strlen(msgText)));
+            if (messages_sent < MESSAGE_COUNT)
+            {
+                // Construct the iothub message from a string or a byte array
+                message_handle = IoTHubMessage_CreateFromString(telemetry_msg);
+                //message_handle = IoTHubMessage_CreateFromByteArray((const unsigned char*)msgText, strlen(msgText)));
 
-            // Set Message property
-            (void)IoTHubMessage_SetMessageId(message_handle, "MSG_ID");
-            (void)IoTHubMessage_SetCorrelationId(message_handle, "CORE_ID");
-            (void)IoTHubMessage_SetContentTypeSystemProperty(message_handle, "application%2Fjson");
-            (void)IoTHubMessage_SetContentEncodingSystemProperty(message_handle, "utf-8");
+                // Set Message property
+                (void)IoTHubMessage_SetMessageId(message_handle, "MSG_ID");
+                (void)IoTHubMessage_SetCorrelationId(message_handle, "CORE_ID");
+                (void)IoTHubMessage_SetContentTypeSystemProperty(message_handle, "application%2Fjson");
+                (void)IoTHubMessage_SetContentEncodingSystemProperty(message_handle, "utf-8");
 
-            // Add custom properties to message
-            MAP_HANDLE propMap = IoTHubMessage_Properties(message_handle);
-            Map_AddOrUpdate(propMap, "property_key", "property_value");
+                // Add custom properties to message
+                MAP_HANDLE propMap = IoTHubMessage_Properties(message_handle);
+                Map_AddOrUpdate(propMap, "property_key", "property_value");
 
-            (void)printf("Sending message %d to IoTHub\r\n", (int)(messages_sent + 1));
-            IoTHubClient_LL_SendEventAsync(iothub_ll_handle, message_handle, send_confirm_callback, NULL);
+                (void)printf("Sending message %d to IoTHub\r\n", (int)(messages_sent + 1));
+                IoTHubClient_LL_SendEventAsync(iothub_ll_handle, message_handle, send_confirm_callback, NULL);
 
-            // The message is copied to the sdk so the we can destroy it
-            IoTHubMessage_Destroy(message_handle);
+                // The message is copied to the sdk so the we can destroy it
+                IoTHubMessage_Destroy(message_handle);
 
-            messages_sent++;
-        }
-        else if (g_message_count_send_confirmations >= MESSAGE_COUNT)
-        {
-            // After all messages are all received stop running
-            g_continueRunning = false;
-        }
+                messages_sent++;
+            }
+            else if (g_message_count_send_confirmations >= MESSAGE_COUNT)
+            {
+                // After all messages are all received stop running
+                g_continueRunning = false;
+            }
 
-        IoTHubClient_LL_DoWork(iothub_ll_handle);
-        ThreadAPI_Sleep(100);
-    } while (g_continueRunning);
+            IoTHubClient_LL_DoWork(iothub_ll_handle);
+            ThreadAPI_Sleep(100);
+        } while (g_continueRunning);
 
-    // Clean up the iothub sdk handle
-    IoTHubClient_LL_Destroy(iothub_ll_handle);
-
+        // Clean up the iothub sdk handle
+        IoTHubClient_LL_Destroy(iothub_ll_handle);
+    }
     // Free all the sdk subsystem
     platform_deinit();
 
