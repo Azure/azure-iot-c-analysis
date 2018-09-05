@@ -342,7 +342,6 @@ void report_binary_sizes(REPORT_HANDLE handle, const BINARY_INFO* bin_info)
 
                     }
                 }
-                //json_value_free(rom_size_node);
             }
             STRING_delete(binary_data);
         }
