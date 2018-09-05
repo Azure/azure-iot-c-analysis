@@ -60,6 +60,11 @@ static void format_bytes(long bytes, char formatting[FORMAT_MAX_LEN])
     size_t length = strlen(temp);
     size_t cntr = 0;
     size_t extra_char = length / 3;
+    if ((length % 3) == 0)
+    {
+        extra_char--;
+    }
+
     for (int index = length-1; index >= 0; index--, cntr++)
     {
         if (cntr >= 3)
@@ -244,6 +249,7 @@ REPORT_HANDLE report_initialize(REPORTER_TYPE type)
     if ((result = (REPORT_INFO*)malloc(sizeof(REPORT_INFO))) == NULL)
     {
         // Report failure
+        (void)printf("Failure allocating report info\r\n");
     }
     else
     {
@@ -254,7 +260,7 @@ REPORT_HANDLE report_initialize(REPORTER_TYPE type)
             STRING_HANDLE json_node = STRING_construct_sprintf(SDK_ANALYSIS_EMPTY_NODE, OS_NAME);
             if (json_node == NULL)
             {
-                (void)printf("Failure creating Analysis node");
+                (void)printf("Failure creating Analysis node\r\n");
                 free(result);
                 result = NULL;
             }
@@ -263,13 +269,13 @@ REPORT_HANDLE report_initialize(REPORTER_TYPE type)
                 result->root_value = json_parse_string(STRING_c_str(json_node));
                 if (result->root_value == NULL)
                 {
-                    (void)printf("Failure parsing value node");
+                    (void)printf("Failure parsing value node\r\n");
                     free(result);
                     result = NULL;
                 }
                 else if ((result->analysis_node = json_value_get_object(result->root_value)) == NULL)
                 {
-                    (void)printf("Failure getting value node");
+                    (void)printf("Failure getting value node\r\n");
                     free(result);
                     result = NULL;
                 }
@@ -400,7 +406,7 @@ bool report_write(REPORT_HANDLE handle)
     else
     {
         char* test = json_serialize_to_string_pretty(handle->root_value);
-        (void)printf("Debug:\r\n%s\r\n", test);
+        (void)printf("\r\n%s\r\n", test);
         json_free_serialized_string(test);
         result = true;
     }
