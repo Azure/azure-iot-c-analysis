@@ -44,21 +44,27 @@ static IOTHUB_CLIENT_TRANSPORT_PROVIDER initialize(MEM_ANALYSIS_INFO* iot_mem_in
     iot_mem_info->iothub_protocol = protocol;
     switch (protocol)
     {
+#ifdef USE_MQTT
         case PROTOCOL_MQTT:
             result = MQTT_Protocol;
             break;
         case PROTOCOL_MQTT_WS:
             result = MQTT_WebSocket_Protocol;
             break;
+#endif
+#ifdef USE_HTTP
         case PROTOCOL_HTTP:
             result = HTTP_Protocol;
             break;
+#endif
+#ifdef USE_AMQP
         case PROTOCOL_AMQP:
             result = AMQP_Protocol;
             break;
         case PROTOCOL_AMQP_WS:
             result = AMQP_Protocol_over_WebSocketsTls;
             break;
+#endif
         default:
             result = NULL;
             break;
@@ -88,7 +94,7 @@ static void iothub_connection_status(IOTHUB_CLIENT_CONNECTION_STATUS result, IOT
     }
 }
 
-int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TYPE protocol, size_t num_msgs_to_send, bool use_byte_array_msg)
+int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, REPORT_HANDLE report_handle, PROTOCOL_TYPE protocol, size_t num_msgs_to_send, bool use_byte_array_msg)
 {
     int result;
     IOTHUB_CLIENT_TRANSPORT_PROVIDER iothub_transport;
@@ -201,14 +207,14 @@ int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
             }
             IoTHubClient_LL_Destroy(iothub_client);
 
-            report_memory_usage(&iot_mem_info);
+            report_memory_usage(report_handle, &iot_mem_info);
         }
         tickcounter_destroy(tick_counter_handle);
     }
     return result;
 }
 
-int initiate_upper_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TYPE protocol, size_t num_msgs_to_send, bool use_byte_array_msg)
+int initiate_upper_level_operation(const CONNECTION_INFO* conn_info, REPORT_HANDLE report_handle, PROTOCOL_TYPE protocol, size_t num_msgs_to_send, bool use_byte_array_msg)
 {
     int result;
     IOTHUB_CLIENT_TRANSPORT_PROVIDER iothub_transport;
@@ -324,7 +330,7 @@ int initiate_upper_level_operation(const CONNECTION_INFO* conn_info, PROTOCOL_TY
 
             IoTHubClient_Destroy(iothub_client);
 
-            report_memory_usage(&iot_mem_info);
+            report_memory_usage(report_handle, &iot_mem_info);
         }
         tickcounter_destroy(tick_counter_handle);
     }

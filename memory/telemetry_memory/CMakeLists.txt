@@ -23,8 +23,20 @@ ENDIF(WIN32)
 
 add_definitions(-DUSE_TELEMETRY)
 add_definitions(-DGB_MEASURE_MEMORY_FOR_THIS -DGB_DEBUG_ALLOC)
+if (${use_mqtt})
+    add_definitions(-DUSE_MQTT)
+endif()
+if (${use_amqp})
+    add_definitions(-DUSE_AMQP)
+endif()
+if (${use_http})
+    add_definitions(-DUSE_HTTP)
+endif()
+if (${use_prov_client})
+    add_definitions(-DUSE_PROVISIONING_CLIENT)
+endif()
 
-include_directories(. .. ../..)
+include_directories(${CMAKE_CURRENT_LIST_DIR} ${REPORTER_DIR} ${REPORTER_DIR}/deps/parson)
 include_directories(${SDK_INCLUDE_DIRS})
 
 add_executable(telemetry_memory ${telemetry_memory_c_files} ${telemetry_memory_h_files})
@@ -47,16 +59,29 @@ link_directories(${IOTHUB_CLIENT_BIN_DIR})
 
 target_link_libraries(telemetry_memory 
     iothub_client
-    iothub_client_mqtt_transport
-    iothub_client_mqtt_ws_transport
-    iothub_client_amqp_transport
-    iothub_client_amqp_ws_transport
-    iothub_client_http_transport
-    iothub_service_client
-    uamqp
-    umqtt
     aziotsharedutil
 )
+
+if (${use_mqtt})
+    target_link_libraries(telemetry_memory 
+        iothub_client_mqtt_transport
+        iothub_client_mqtt_ws_transport
+        umqtt
+    )
+endif()
+if (${use_amqp})
+    target_link_libraries(telemetry_memory 
+        iothub_client_amqp_transport
+        iothub_client_amqp_ws_transport
+        uamqp
+    )
+endif()
+if (${use_http})
+    target_link_libraries(telemetry_memory 
+        iothub_service_client
+        iothub_client_http_transport
+    )
+endif()
 
 if(WIN32)
     target_link_libraries(telemetry_memory ws2_32 rpcrt4 ncrypt winhttp secur32 crypt32)

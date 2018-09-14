@@ -217,6 +217,7 @@ static int construct_dev_conn_string(MEM_ANALYTIC_INFO* mem_info, CONNECTION_INF
 
 static int parse_command_line(int argc, char* argv[], MEM_ANALYTIC_INFO* mem_info, CONNECTION_INFO* conn_info)
 {
+    // -c "[connection_string]" -d [device_name] -k [device_key] 
     int result = 0;
     ARGUEMENT_TYPE argument_type = ARGUEMENT_TYPE_UNKNOWN;
 
@@ -268,30 +269,46 @@ static int parse_command_line(int argc, char* argv[], MEM_ANALYTIC_INFO* mem_inf
 
     if (mem_info->device_info.deviceId == NULL && conn_info->scope_id == NULL)
     {
+#ifdef USE_HTTP
         result = create_device(mem_info);
+#else
+        result = __LINE__;
+#endif
     }
     return result;
 }
 
-static void send_heap_info(CONNECTION_INFO* conn_info)
+static void send_heap_info(CONNECTION_INFO* conn_info, REPORT_HANDLE report_handle)
 {
     // AMQP Sending
-    initiate_lower_level_operation(conn_info, PROTOCOL_AMQP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-    initiate_lower_level_operation(conn_info, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+#ifdef USE_AMQP
+    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_AMQP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+#endif
     // HTTP Sending
-    initiate_lower_level_operation(conn_info, PROTOCOL_HTTP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+#ifdef USE_HTTP
+    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_HTTP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
     // MQTT Sending
-    initiate_lower_level_operation(conn_info, PROTOCOL_MQTT, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-    initiate_lower_level_operation(conn_info, PROTOCOL_MQTT_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+#endif
+#ifdef USE_MQTT
+    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_MQTT, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_MQTT_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+#endif
 
     // AMQP Sending
-    initiate_upper_level_operation(conn_info, PROTOCOL_AMQP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-    initiate_upper_level_operation(conn_info, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+#ifdef USE_AMQP
+    initiate_upper_level_operation(conn_info, report_handle, PROTOCOL_AMQP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+    initiate_upper_level_operation(conn_info, report_handle, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+#endif
     // HTTP Sending
-    initiate_upper_level_operation(conn_info, PROTOCOL_HTTP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+#ifdef USE_HTTP
+    initiate_upper_level_operation(conn_info, report_handle, PROTOCOL_HTTP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+#endif
     // MQTT Sending
-    initiate_upper_level_operation(conn_info, PROTOCOL_MQTT, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-    initiate_upper_level_operation(conn_info, PROTOCOL_MQTT_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+#ifdef USE_MQTT
+    initiate_upper_level_operation(conn_info, report_handle, PROTOCOL_MQTT, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+    initiate_upper_level_operation(conn_info, report_handle, PROTOCOL_MQTT_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+#endif
 }
 
 int main(int argc, char* argv[])
@@ -299,6 +316,8 @@ int main(int argc, char* argv[])
     int result;
     MEM_ANALYTIC_INFO mem_info;
     CONNECTION_INFO conn_info;
+    REPORT_HANDLE report_handle;
+
     memset(&mem_info, 0, sizeof(mem_info));
     memset(&conn_info, 0, sizeof(conn_info));
 
@@ -312,6 +331,12 @@ int main(int argc, char* argv[])
         (void)printf("failed construct dev\r\n");
         result = __LINE__;
     }
+    else if ((report_handle = report_initialize(REPORTER_TYPE_JSON)) == NULL)
+    {
+        (void)printf("Failure creating report handle\r\n");
+        free(conn_info.device_conn_string);
+        result = __LINE__;
+    }
     else if (initialize_sdk() != 0)
     {
         (void)printf("initializing SDK failed\r\n");
@@ -320,18 +345,21 @@ int main(int argc, char* argv[])
     }
     else
     {
-        send_heap_info(&conn_info);
+        send_heap_info(&conn_info, report_handle);
 
         result = 0;
 
         if (mem_info.create_device != 0)
         {
+#ifdef USE_HTTP
             remove_device(&mem_info);
+#endif
         }
 
         gballoc_deinit();
         platform_deinit();
         gbnetwork_deinit();
+        report_deinitialize(report_handle);
 
         if (mem_info.create_device != 0)
         {

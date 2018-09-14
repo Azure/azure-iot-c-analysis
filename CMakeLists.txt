@@ -8,6 +8,7 @@ include("configs/analysisFunctions.cmake")
 
 set(TARGET_GIT_BRANCH "master" CACHE STRING "Branch of the SDK repo to target`")
 
+set(no_logging ON)
 set(use_mqtt ON)
 set(use_amqp OFF)
 set(use_http OFF)
@@ -28,6 +29,13 @@ endif()
 include(ExternalProject)
 
 message("Generated with config types: ${CMAKE_CONFIGURATION_TYPES}")
+
+if(${no_logging})
+    add_definitions(-DNO_LOGGING)
+endif()
+if (${dont_use_uploadtoblob})
+    add_definitions(-DDONT_USE_UPLOADTOBLOB)
+endif()
 
 # load the c-sdk
 #SET(CMAKE_BUILD_TYPE Release)
@@ -67,5 +75,5 @@ set(SDK_CERT_INCLUDE_DIRS
 )
 set(REPORTER_DIR ${CMAKE_CURRENT_LIST_DIR})
 
-#add_subdirectory(memory)
+add_subdirectory(memory)
 add_analytic_directory(binary_info "binary_info")

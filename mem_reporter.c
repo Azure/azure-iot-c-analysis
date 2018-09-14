@@ -31,18 +31,29 @@ static REPORTER_TYPE g_report_type = REPORTER_TYPE_JSON;
 static const char* const UNKNOWN_TYPE = "unknown";
 static const char* const NODE_SDK_ANALYSIS = "sdkAnalysis";
 static const char* const NODE_BASE_ARRAY = "analysisItem";
-static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"sdkAnalysis\" : { \"osType\": \"%s\", \"analysisItem\" : [] } }";
+static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"sdkAnalysis\" : { \"osType\": \"%s\", \"uploadEnabled\": \"%s\", \"logEnabled\": \"%s\", \"analysisItem\" : [] } }";
 static const char* const NODE_OPERATING_SYSTEM = "osType";
 
 static const char* const NETWORK_ANALYSIS_JSON_FMT = "{ \"type\": \"ROM\", \"dateTime\": \"%s\", \"opType\": \"%s\", \"feature\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgPayload\" : %d, \"sendBytes\" : %" PRIu64 ", \"numSends\" : %ld, \"recvBytes\" : %" PRIu64 ", \"numRecv\" : %ld } }";
 static const char* const NETWORK_ANALYSIS_CVS_FMT = "%s, %s, %s, %s, %s, %s, %d, %" PRIu64 ", %ld, %" PRIu64 ", %ld";
 
-static const char* const BINARY_SIZE_JSON_FMT = "{ \"type\": \"ROM\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"binarySize\" : \"%ld\" }";
+static const char* const BINARY_SIZE_JSON_FMT = "{ \"type\": \"ROM\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"binarySize\" : \"%s\" }";
+static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"type\": \"RAM\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgCount\" : %d, \"maxMemory\" : %zu, \"currMemory\" : %zu, \"numAlloc\" : %zu } }";
 
 static const char* const BINARY_SIZE_CVS_FMT = "%s, %s, %s, %s, %s, %s, %s, %ld";
 
-static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"sdkAnalysis\": { \"dateTime\": \"%s\", \"opType\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"OS\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgCount\" : %d, \"maxMemory\" : %zu, \"currMemory\" : %zu, \"numAlloc\" : %zu } }";
 static const char* const HEAP_ANALYSIS_CVS_FMT = "%s, %s, %s, %s, %s, %s, %s, %d, %zu, %zu, %zu";
+
+#ifdef NO_LOGGING
+static const char* const LOGGING_INCLUDED = "false";
+#else
+static const char* const LOGGING_INCLUDED = "true";
+#endif
+#ifdef DONT_USE_UPLOADTOBLOB
+static const char* const UPLOAD_INCLUDED = "false";
+#else
+static const char* const UPLOAD_INCLUDED = "true";
+#endif
 
 typedef struct REPORT_INFO_TAG
 {
@@ -75,7 +86,38 @@ static void format_bytes(long bytes, char formatting[FORMAT_MAX_LEN])
         }
         formatting[index + extra_char] = temp[index];
     }
+}
 
+static void add_node_to_json(const char* node_data, const REPORT_INFO* report_info)
+{
+    JSON_Value* json_value;
+    if ((json_value = json_parse_string(node_data)) != NULL)
+    {
+        JSON_Object* json_object;
+        JSON_Array* base_array;
+        JSON_Value* json_analysis;
+
+        if ((json_analysis = json_object_get_value(report_info->analysis_node, NODE_SDK_ANALYSIS)) == NULL)
+        {
+            (void)printf("ERROR: Failed getting node object value\r\n");
+        }
+        else if ((json_object = json_value_get_object(json_analysis)) == NULL)
+        {
+            (void)printf("ERROR: Failed getting object value\r\n");
+        }
+        else if ((base_array = json_object_get_array(json_object, NODE_BASE_ARRAY)) == NULL)
+        {
+            (void)printf("ERROR: Failed getting object value\r\n");
+        }
+        else
+        {
+            if (json_array_append_value(base_array, json_value) != JSONSuccess)
+            {
+                (void)printf("ERROR: Failed to allocate binary json\r\n");
+
+            }
+        }
+    }
 }
 
 static void upload_to_azure(const char* data)
@@ -201,13 +243,13 @@ static const char* get_operation_type(OPERATION_TYPE type)
     return result;
 }
 
-static const char* get_format_value(OPERATION_TYPE type)
+static const char* get_format_value(const REPORT_INFO* report_info, OPERATION_TYPE type)
 {
     const char* result;
     switch (type)
     {
         case OPERATION_MEMORY:
-            if (g_report_type == REPORTER_TYPE_CVS)
+            if (report_info->type == REPORTER_TYPE_CVS)
             {
                 result = HEAP_ANALYSIS_CVS_FMT;
             }
@@ -217,7 +259,7 @@ static const char* get_format_value(OPERATION_TYPE type)
             }
             break;
         case OPERATION_NETWORK:
-            if (g_report_type == REPORTER_TYPE_CVS)
+            if (report_info->type == REPORTER_TYPE_CVS)
             {
                 result = NETWORK_ANALYSIS_CVS_FMT;
             }
@@ -227,7 +269,7 @@ static const char* get_format_value(OPERATION_TYPE type)
             }
             break;
         case OPERATION_BINARY_SIZE:
-            if (g_report_type == REPORTER_TYPE_CVS)
+            if (report_info->type == REPORTER_TYPE_CVS)
             {
                 result = BINARY_SIZE_CVS_FMT;
             }
@@ -257,7 +299,7 @@ REPORT_HANDLE report_initialize(REPORTER_TYPE type)
         result->type = type;
         if (result->type == REPORTER_TYPE_JSON)
         {
-            STRING_HANDLE json_node = STRING_construct_sprintf(SDK_ANALYSIS_EMPTY_NODE, OS_NAME);
+            STRING_HANDLE json_node = STRING_construct_sprintf(SDK_ANALYSIS_EMPTY_NODE, OS_NAME, UPLOAD_INCLUDED, LOGGING_INCLUDED);
             if (json_node == NULL)
             {
                 (void)printf("Failure creating Analysis node\r\n");
@@ -308,13 +350,13 @@ void report_binary_sizes(REPORT_HANDLE handle, const BINARY_INFO* bin_info)
 {
     if (handle != NULL)
     {
-        JSON_Value* rom_size_node;
         char date_time[DATE_TIME_LEN];
         char byte_formatted[FORMAT_MAX_LEN];
         get_report_date(date_time, DATE_TIME_LEN);
         format_bytes(bin_info->binary_size, byte_formatted);
 
-        STRING_HANDLE binary_data = STRING_construct_sprintf(BINARY_SIZE_JSON_FMT, date_time, get_feature_type(bin_info->feature_type),
+        const char* string_format = get_format_value(handle, bin_info->operation_type);
+        STRING_HANDLE binary_data = STRING_construct_sprintf(string_format, date_time, get_feature_type(bin_info->feature_type),
             get_layer_type(bin_info->feature_type), bin_info->iothub_version, get_protocol_name(bin_info->iothub_protocol), byte_formatted);
         if (binary_data == NULL)
         {
@@ -322,78 +364,62 @@ void report_binary_sizes(REPORT_HANDLE handle, const BINARY_INFO* bin_info)
         }
         else
         {
-            if ((rom_size_node = json_parse_string(STRING_c_str(binary_data))) != NULL)
-            {
-                JSON_Object* json_object;
-                JSON_Array* base_array;
-                JSON_Value* json_analysis;
-
-                if ((json_analysis = json_object_get_value(handle->analysis_node, NODE_SDK_ANALYSIS)) == NULL)
-                {
-                    (void)printf("ERROR: Failed getting node object value\r\n");
-                }
-                else if ((json_object = json_value_get_object(json_analysis)) == NULL)
-                {
-                    (void)printf("ERROR: Failed getting object value\r\n");
-                }
-                else if ((base_array = json_object_get_array(json_object, NODE_BASE_ARRAY)) == NULL)
-                {
-                    (void)printf("ERROR: Failed getting object value\r\n");
-                }
-                else
-                {
-                    if (json_array_append_value(base_array, rom_size_node) != JSONSuccess)
-                    {
-                        (void)printf("ERROR: Failed to allocate binary json\r\n");
-
-                    }
-                }
-            }
+            add_node_to_json(STRING_c_str(binary_data), handle);
             STRING_delete(binary_data);
         }
     }
 }
 
-void report_memory_usage(const MEM_ANALYSIS_INFO* iot_mem_info)
+void report_memory_usage(REPORT_HANDLE handle, const MEM_ANALYSIS_INFO* iot_mem_info)
 {
-    char date_time[DATE_TIME_LEN];
-    get_report_date(date_time, DATE_TIME_LEN);
+    if (handle != NULL)
+    {
+        char date_time[DATE_TIME_LEN];
+        char max_use[FORMAT_MAX_LEN];
+        char current_mem[FORMAT_MAX_LEN];
+        char alloc_number[FORMAT_MAX_LEN];
+        get_report_date(date_time, DATE_TIME_LEN);
+        
+        format_bytes(gballoc_getMaximumMemoryUsed(), max_use);
+        format_bytes(gballoc_getCurrentMemoryUsed(), current_mem);
+        format_bytes(gballoc_getAllocationCount(), alloc_number);
 
-    const char* string_format = get_format_value(iot_mem_info->operation_type);
-    STRING_HANDLE analysis_data = STRING_construct_sprintf(string_format, date_time, get_operation_type(iot_mem_info->operation_type), get_feature_type(iot_mem_info->feature_type), get_layer_type(iot_mem_info->feature_type), OS_NAME,
-        iot_mem_info->iothub_version, get_protocol_name(iot_mem_info->iothub_protocol), iot_mem_info->msg_sent, gballoc_getMaximumMemoryUsed(), gballoc_getCurrentMemoryUsed(), gballoc_getAllocationCount());
-    if (analysis_data == NULL)
-    {
-        (void)printf("ERROR: Failed to allocate memory json\r\n");
-    }
-    else
-    {
-        (void)printf("%s\r\n", STRING_c_str(analysis_data));
-        ThreadAPI_Sleep(10);
-        upload_to_azure(STRING_c_str(analysis_data));
-        STRING_delete(analysis_data);
+        const char* string_format = get_format_value(handle, iot_mem_info->operation_type);
+        STRING_HANDLE analysis_data = STRING_construct_sprintf(string_format, date_time, get_feature_type(iot_mem_info->feature_type), get_layer_type(iot_mem_info->feature_type),
+            iot_mem_info->iothub_version, get_protocol_name(iot_mem_info->iothub_protocol), iot_mem_info->msg_sent, max_use, gballoc_getCurrentMemoryUsed(), gballoc_getAllocationCount());
+        if (analysis_data == NULL)
+        {
+            (void)printf("ERROR: Failed to allocate memory json\r\n");
+        }
+        else
+        {
+            add_node_to_json(STRING_c_str(analysis_data), handle);
+            STRING_delete(analysis_data);
+        }
     }
 }
 
-void report_network_usage(const MEM_ANALYSIS_INFO* iot_mem_info)
+void report_network_usage(REPORT_HANDLE handle, const MEM_ANALYSIS_INFO* iot_mem_info)
 {
-    char date_time[DATE_TIME_LEN];
-    get_report_date(date_time, DATE_TIME_LEN);
-
-    STRING_HANDLE network_data = STRING_construct_sprintf(NETWORK_ANALYSIS_JSON_FMT, date_time, get_operation_type(iot_mem_info->operation_type), get_feature_type(iot_mem_info->feature_type), OS_NAME, iot_mem_info->iothub_version,
-        get_protocol_name(iot_mem_info->iothub_protocol), iot_mem_info->msg_sent, gbnetwork_getBytesSent(), (uint32_t)gbnetwork_getNumSends(), gbnetwork_getBytesRecv(), (uint32_t)gbnetwork_getNumRecv());
-    if (network_data == NULL)
+    if (handle != NULL)
     {
-        (void)printf("ERROR: Failed to allocate networking json\r\n");
-    }
-    else
-    {
-        (void)printf("%s\r\n", STRING_c_str(network_data));
-        ThreadAPI_Sleep(10);
-        upload_to_azure(STRING_c_str(network_data));
-        STRING_delete(network_data);
-    }
+        char date_time[DATE_TIME_LEN];
+        get_report_date(date_time, DATE_TIME_LEN);
 
+        STRING_HANDLE network_data = STRING_construct_sprintf(NETWORK_ANALYSIS_JSON_FMT, date_time, get_operation_type(iot_mem_info->operation_type), get_feature_type(iot_mem_info->feature_type), OS_NAME, iot_mem_info->iothub_version,
+            get_protocol_name(iot_mem_info->iothub_protocol), iot_mem_info->msg_sent, gbnetwork_getBytesSent(), (uint32_t)gbnetwork_getNumSends(), gbnetwork_getBytesRecv(), (uint32_t)gbnetwork_getNumRecv());
+        if (network_data == NULL)
+        {
+            (void)printf("ERROR: Failed to allocate networking json\r\n");
+        }
+        else
+        {
+            (void)printf("%s\r\n", STRING_c_str(network_data));
+            ThreadAPI_Sleep(10);
+            upload_to_azure(STRING_c_str(network_data));
+            STRING_delete(network_data);
+        }
+    }
 }
 
 bool report_write(REPORT_HANDLE handle)

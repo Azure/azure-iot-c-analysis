@@ -1,0 +1,11 @@
+SDK Without Diagnostic
+{ "sdkAnalysis": { "dateTime": "8-30-2018", "opType": "binSize", "feature": "d2c", "layer": "lower layer", "OS": "Linux", "version": "1.2.8", "transport" : "MQTT PROTOCOL", "binarySize" : "387776"} }
+{ "sdkAnalysis": { "dateTime": "8-30-2018", "opType": "binSize", "feature": "d2c", "layer": "lower layer", "OS": "Linux", "version": "1.2.8", "transport" : "MQTT WS PROTOCOL", "binarySize" : "439008"} }
+
+SDK Without Diag & Retry
+{ "sdkAnalysis": { "dateTime": "8-30-2018", "opType": "binSize", "feature": "d2c", "layer": "lower layer", "OS": "Linux", "version": "1.2.8", "transport" : "MQTT PROTOCOL", "binarySize" : "379040"} }
+{ "sdkAnalysis": { "dateTime": "8-30-2018", "opType": "binSize", "feature": "d2c", "layer": "lower layer", "OS": "Linux", "version": "1.2.8", "transport" : "MQTT WS PROTOCOL", "binarySize" : "434400"} }
+
+SDK Without Methods & Twin
+{ "sdkAnalysis": { "dateTime": "8-30-2018", "opType": "binSize", "feature": "d2c", "layer": "lower layer", "OS": "Linux", "version": "1.2.8", "transport" : "MQTT PROTOCOL", "binarySize" : "374456"} }
+{ "sdkAnalysis": { "dateTime": "8-30-2018", "opType": "binSize", "feature": "d2c", "layer": "lower layer", "OS": "Linux", "version": "1.2.8", "transport" : "MQTT WS PROTOCOL", "binarySize" : "425680"} }

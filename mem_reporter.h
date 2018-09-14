@@ -93,9 +93,9 @@ typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
     extern REPORT_HANDLE report_initialize(REPORTER_TYPE type);
     extern void report_deinitialize(REPORT_HANDLE handle);
     
-    extern void report_memory_usage(const MEM_ANALYSIS_INFO* iot_mem_info);
+    extern void report_memory_usage(REPORT_HANDLE handle, const MEM_ANALYSIS_INFO* iot_mem_info);
     extern void report_binary_sizes(REPORT_HANDLE handle, const BINARY_INFO* bin_info);
-    extern void report_network_usage(const MEM_ANALYSIS_INFO* iot_mem_info);
+    extern void report_network_usage(REPORT_HANDLE handle, const MEM_ANALYSIS_INFO* iot_mem_info);
 
     extern bool report_write(REPORT_HANDLE handle);
 
