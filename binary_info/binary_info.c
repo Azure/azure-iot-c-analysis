@@ -37,7 +37,8 @@ typedef enum ARGUEMENT_TYPE_TAG
 {
     ARGUEMENT_TYPE_UNKNOWN,
     ARGUEMENT_TYPE_CMAKE_DIR,
-    ARGUEMENT_TYPE_OUTPUT_FILE
+    ARGUEMENT_TYPE_OUTPUT_FILE,
+    ARGUEMENT_TYPE_SKIP_UPPER_LAYER
 } ARGUEMENT_TYPE;
 
 static const char* get_binary_file(PROTOCOL_TYPE type)
@@ -128,7 +129,7 @@ static int calculate_filesize(BINARY_INFO* bin_info, REPORT_HANDLE report_handle
             target_file = fopen(STRING_c_str(filename_handle), "rb");
             if (target_file == NULL)
             {
-                (void)printf("Failed opening file: %s\r\n", STRING_c_str(filename_handle));
+                // If the file isn't there then don't report on it and just return
                 result = __LINE__;
             }
             else
@@ -162,6 +163,11 @@ static int parse_command_line(int argc, char* argv[], BINARY_INFO* bin_info)
             else if (argv[index][0] == '-' && (argv[index][1] == 'o' || argv[index][1] == 'O'))
             {
                 argument_type = ARGUEMENT_TYPE_OUTPUT_FILE;
+            }
+            else if (argv[index][0] == '-' && (argv[index][1] == 'l' || argv[index][1] == 'L') )
+            {
+                bin_info->skip_ul = argv[index];
+                argument_type = ARGUEMENT_TYPE_UNKNOWN;
             }
         }
         else
@@ -212,31 +218,27 @@ int main(int argc, char* argv[])
         bin_info.operation_type = OPERATION_BINARY_SIZE;
         bin_info.iothub_version = IoTHubClient_GetVersionString();
         bin_info.feature_type = FEATURE_TELEMETRY_LL;
-#ifdef USE_MQTT
+        // USE_MQTT
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_MQTT, BINARY_LL_PATH_FMT);
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_MQTT_WS, BINARY_LL_PATH_FMT);
-#endif
-#ifdef USE_HTTP
+
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_HTTP, BINARY_LL_PATH_FMT);
-#endif
-#ifdef USE_AMQP
+
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP, BINARY_LL_PATH_FMT);
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP_WS, BINARY_LL_PATH_FMT);
-#endif
 
-        bin_info.feature_type = FEATURE_TELEMETRY_UL;
-#ifdef USE_MQTT
-        (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_MQTT, BINARY_UL_PATH_FMT);
-        (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_MQTT_WS, BINARY_UL_PATH_FMT);
-#endif
-#ifdef USE_HTTP
-        (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_HTTP, BINARY_UL_PATH_FMT);
-        (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP, BINARY_UL_PATH_FMT);
-#endif
-#ifdef USE_AMQP
-        (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP_WS, BINARY_UL_PATH_FMT);
-#endif
+        if (!bin_info.skip_ul)
+        {
+            bin_info.feature_type = FEATURE_TELEMETRY_UL;
 
+            (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_MQTT, BINARY_UL_PATH_FMT);
+            (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_MQTT_WS, BINARY_UL_PATH_FMT);
+
+            (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_HTTP, BINARY_UL_PATH_FMT);
+            (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP, BINARY_UL_PATH_FMT);
+
+            (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP_WS, BINARY_UL_PATH_FMT);
+        }
 #ifdef USE_PROVISIONING_CLIENT
         bin_info.iothub_version = Prov_Device_GetVersionString();
         bin_info.feature_type = FEATURE_PROVISIONING_LL;

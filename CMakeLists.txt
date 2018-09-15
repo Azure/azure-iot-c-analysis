@@ -8,7 +8,7 @@ include("configs/analysisFunctions.cmake")
 
 set(TARGET_GIT_BRANCH "master" CACHE STRING "Branch of the SDK repo to target`")
 
-set(no_logging ON)
+set(no_logging OFF)
 set(use_mqtt ON)
 set(use_amqp ON)
 set(use_http ON)

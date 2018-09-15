@@ -88,6 +88,7 @@ typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
         const char* cmake_dir;
         long binary_size;
         const char* output_file;
+        bool skip_ul;
     } BINARY_INFO;
 
     extern REPORT_HANDLE report_initialize(REPORTER_TYPE type);
