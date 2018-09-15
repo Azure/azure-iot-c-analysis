@@ -68,17 +68,17 @@ int main(void)
     const char* telemetry_msg = "test_message";
 
     // Select the Protocol to use with the connection
-#ifdef USE_AMQP
-    #ifdef USE_WEB_SOCKETS
-        protocol = AMQP_Protocol_over_WebSocketsTls;
-    #else
-        protocol = AMQP_Protocol;
-    #endif
-#elif USE_MQTT
+#ifdef USE_MQTT
     #ifdef USE_WEB_SOCKETS
         protocol = MQTT_WebSocket_Protocol;
     #else
         protocol = MQTT_Protocol;
+    #endif
+#elif USE_AMQP
+    #ifdef USE_WEB_SOCKETS
+        protocol = AMQP_Protocol_over_WebSocketsTls;
+    #else
+        protocol = AMQP_Protocol;
     #endif
 #else
     // USE_HTTP

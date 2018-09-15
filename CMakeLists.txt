@@ -10,8 +10,8 @@ set(TARGET_GIT_BRANCH "master" CACHE STRING "Branch of the SDK repo to target`")
 
 set(no_logging ON)
 set(use_mqtt ON)
-set(use_amqp OFF)
-set(use_http OFF)
+set(use_amqp ON)
+set(use_http ON)
 set(use_prov_client OFF)
 set(dont_use_uploadtoblob ON)
 set(sdk_branch "master" CACHE STRING "The branch of the sdk")
@@ -30,18 +30,6 @@ include(ExternalProject)
 
 message("Generated with config types: ${CMAKE_CONFIGURATION_TYPES}")
 
-if(${no_logging})
-    add_definitions(-DNO_LOGGING)
-endif()
-if (${dont_use_uploadtoblob})
-    add_definitions(-DDONT_USE_UPLOADTOBLOB)
-endif()
-
-# load the c-sdk
-#SET(CMAKE_BUILD_TYPE Release)
-#set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Wall")
-#set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall")
-
 # Check out Git submodules.
 if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk/.gitmodules")
     message("running git clone of the c-sdk into ${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk")
@@ -53,6 +41,18 @@ else()
         set(refresh_sdk OFF CACHE BOOL "" FORCE)
     endif()
 endif()
+
+if(${no_logging})
+    add_definitions(-DNO_LOGGING)
+endif()
+if (${dont_use_uploadtoblob})
+    add_definitions(-DDONT_USE_UPLOADTOBLOB)
+endif()
+
+# load the c-sdk
+#SET(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Wall")
+#set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall")
 
 set(memory_trace ON)
 set(skip_samples ON)
