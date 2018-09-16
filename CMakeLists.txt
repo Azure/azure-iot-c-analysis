@@ -57,6 +57,8 @@ endif()
 set(memory_trace ON)
 set(skip_samples ON)
 
+add_definitions(-DGB_DEBUG_NETWORK -DGB_MEASURE_NETWORK_FOR_THIS)
+
 add_subdirectory(deps/c-sdk)
 
 set(SDK_INCLUDE_DIRS 
@@ -75,5 +77,6 @@ set(SDK_CERT_INCLUDE_DIRS
 )
 set(REPORTER_DIR ${CMAKE_CURRENT_LIST_DIR})
 
-add_subdirectory(memory)
 add_analytic_directory(binary_info "binary_info")
+add_subdirectory(network)
+add_subdirectory(memory)

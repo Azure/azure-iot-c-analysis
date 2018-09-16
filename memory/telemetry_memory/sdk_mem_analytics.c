@@ -177,11 +177,7 @@ int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, REPORT_HAND
                             (void)IoTHubMessage_SetContentTypeSystemProperty(msg_handle, "application%2Fjson");
                             (void)IoTHubMessage_SetContentEncodingSystemProperty(msg_handle, "utf-8");
 
-                            MAP_HANDLE propMap = IoTHubMessage_Properties(msg_handle);
-                            if (Map_AddOrUpdate(propMap, "property", "property_text") != MAP_OK)
-                            {
-                                (void)printf("ERROR: Map_AddOrUpdate Failed!\r\n");
-                            }
+                            (void)IoTHubMessage_SetProperty(msg_handle, "property_key", "property_value");
 
                             if (IoTHubClient_LL_SendEventAsync(iothub_client, msg_handle, NULL, NULL) != IOTHUB_CLIENT_OK)
                             {

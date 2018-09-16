@@ -3,18 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef USE_TELEMETRY
-    #include "sdk_mem_analytics.h"
-#elif USE_C2D
-    #include "c2d_mem_analytics.h"
-#elif USE_PROVISIONING
-    #include "provisioning_mem.h"
-#elif USE_NETWORKING
-    #ifdef IOTHUB_CLIENT
-        #include "network_info.h"
-    #else
-        #include "prov_net_info.h"
-    #endif
+
+#ifdef IOTHUB_CLIENT
+    #include "network_info.h"
+#else
+    #include "prov_net_info.h"
 #endif
 
 #include "azure_c_shared_utility/connection_string_parser.h"
@@ -278,36 +271,17 @@ static int parse_command_line(int argc, char* argv[], MEM_ANALYTIC_INFO* mem_inf
     return result;
 }
 
-static void send_heap_info(CONNECTION_INFO* conn_info, REPORT_HANDLE report_handle)
+static void send_network_info(CONNECTION_INFO* conn_info, REPORT_HANDLE report_handle)
 {
     // AMQP Sending
 #ifdef USE_AMQP
     initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_AMQP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
     initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
 #endif
-    // HTTP Sending
-#ifdef USE_HTTP
-    //initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_HTTP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
     // MQTT Sending
-#endif
 #ifdef USE_MQTT
     initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_MQTT, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
     initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_MQTT_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-#endif
-
-    // AMQP Sending
-#ifdef USE_AMQP
-    initiate_upper_level_operation(conn_info, report_handle, PROTOCOL_AMQP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-    initiate_upper_level_operation(conn_info, report_handle, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-#endif
-    // HTTP Sending
-#ifdef USE_HTTP
-    //initiate_upper_level_operation(conn_info, report_handle, PROTOCOL_HTTP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-#endif
-    // MQTT Sending
-#ifdef USE_MQTT
-    initiate_upper_level_operation(conn_info, report_handle, PROTOCOL_MQTT, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-    initiate_upper_level_operation(conn_info, report_handle, PROTOCOL_MQTT_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
 #endif
 }
 
@@ -345,7 +319,7 @@ int main(int argc, char* argv[])
     }
     else
     {
-        send_heap_info(&conn_info, report_handle);
+        send_network_info(&conn_info, report_handle);
 
         result = 0;
 

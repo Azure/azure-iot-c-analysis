@@ -17,8 +17,6 @@ IF(WIN32)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 ENDIF(WIN32)
 
-#add_definitions(-DGB_MEASURE_MEMORY_FOR_THIS -DGB_DEBUG_ALLOC)
-
 include_directories(${CMAKE_CURRENT_LIST_DIR} ${REPORTER_DIR} ${REPORTER_DIR}/deps/parson)
 include_directories(${SDK_INCLUDE_DIRS})
 set(BINARY_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR})
