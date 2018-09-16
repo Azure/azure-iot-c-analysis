@@ -11,7 +11,7 @@ cmake_folder=$repo_root"/cmake/analysis_linux"
 rm -r -f $cmake_folder
 mkdir -p $cmake_folder
 pushd $cmake_folder
-cmake $repo_root -DCMAKE_BUILD_TYPE=Release -Dskip_samples:BOOL=ON -Duse_prov_client:BOOL=ON -Ddont_use_uploadtoblob:BOOL=OFF
+cmake $repo_root -DCMAKE_BUILD_TYPE=Release -Duse_prov_client:BOOL=ON
 
 # Set the default cores
 CORES=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
@@ -34,6 +34,7 @@ make --jobs=$CORES
 # Run the analysis applications
 ./binary_info/binary_info -c $cmake_folder
 ./memory/telemetry_memory/telemetry_memory -c $IOTHUB_CONNECTION_STRING
-./memory/telemetry_net_info/telemetry_net_info -c $IOTHUB_CONNECTION_STRING
-./memory/prov_net_info/prov_net_info -c $DPS_C_CONNECTION_STRING -s $DPS_C_SCOPE_ID_VALUE
-./memory/provisioning_mem/provisioning_mem -c $DPS_C_CONNECTION_STRING -s $DPS_C_SCOPE_ID_VALUE
+./network/telemetry_net_info/telemetry_net_info -c $IOTHUB_CONNECTION_STRING
+
+#./memory/prov_net_info/prov_net_info -c $DPS_C_CONNECTION_STRING -s $DPS_C_SCOPE_ID_VALUE
+#./memory/provisioning_mem/provisioning_mem -c $DPS_C_CONNECTION_STRING -s $DPS_C_SCOPE_ID_VALUE

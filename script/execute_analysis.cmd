@@ -12,7 +12,7 @@ set repo-root=%current-path%\..
 rem // resolve to fully qualified path
 for %%i in ("%repo-root%") do set repo-root=%%~fi
 
-set cmake_folder=%repo-root%\cmake\analysis
+set cmake_folder=%repo-root%\cmake\analysis_win
 
 echo Repo Root: %repo-root%
 echo CMake Dir: %cmake_folder%
@@ -35,6 +35,6 @@ if !ERRORLEVEL! neq 0 exit /b !ERRORLEVEL!
 
 rem Run the analysis applications
 %cmake_folder%\binary_info\Release\binary_info.exe -c %cmake_folder%
-%cmake_folder%\memory\telemetry_memory\release\telemetry_memory.exe -c %IOTHUB_CONNECTION_STRING% -d jebrandoDevice -k "P3YJYsVQwytQP2JrLca9lSCvyYfPDVjiCZR+5apSQ7c="
-%cmake_folder%\memory\network_info\release\network_info -c %IOTHUB_CONNECTION_STRING% -d jebrandoDevice -k "P3YJYsVQwytQP2JrLca9lSCvyYfPDVjiCZR+5apSQ7c="
-%cmake_folder%\memory\provisioning_mem\release\provisioning_mem -c "global.azure-devices-provisioning.net" -s %PROV_SCOPE_ID%
+%cmake_folder%\memory\telemetry_memory\release\telemetry_memory.exe -c %IOTHUB_CONNECTION_STRING%
+rem %cmake_folder%\memory\provisioning_mem\release\provisioning_mem -c "global.azure-devices-provisioning.net" -s %PROV_SCOPE_ID%
+%cmake_folder%\network\network_info\release\network_info -c %IOTHUB_CONNECTION_STRING%
