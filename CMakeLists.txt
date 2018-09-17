@@ -8,27 +8,15 @@ include("configs/analysisFunctions.cmake")
 
 set(TARGET_GIT_BRANCH "master" CACHE STRING "Branch of the SDK repo to target`")
 
-set(no_logging OFF)
-set(use_mqtt ON)
-set(use_amqp ON)
-set(use_http ON)
 set(use_prov_client OFF)
-set(dont_use_uploadtoblob ON)
 set(sdk_branch "master" CACHE STRING "The branch of the sdk")
 
+option(dont_use_uploadtoblob "set dont_use_uploadtoblob to ON if the functionality of upload to blob is to be excluded, OFF otherwise. It requires HTTP" ON)
 option(refresh_sdk "get the latest sdk" OFF)
-
-if(WIN32)
-    option(use_openssl "set use_openssl to ON if openssl is to be used, set to OFF to not use openssl" OFF)
-    option(use_wolfssl "set use_wolfssl to ON if wolfssl is to be used, set to OFF to not use wolfssl" OFF)
-else()
-    option(use_openssl "set use_openssl to ON if openssl is to be used, set to OFF to not use openssl" ON)
-    option(use_wolfssl "set use_wolfssl to ON if wolfssl is to be used, set to OFF to not use wolfssl" OFF)
-endif()
+option(memory_trace "" ON)
+option(skip_samples "set skip_samples to ON to skip building samples (default is OFF)[if possible, they are always build]" ON)
 
 include(ExternalProject)
-
-message("Generated with config types: ${CMAKE_CONFIGURATION_TYPES}")
 
 # Check out Git submodules.
 if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk/.gitmodules")
@@ -53,9 +41,6 @@ endif()
 #SET(CMAKE_BUILD_TYPE Release)
 #set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -Wall")
 #set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall")
-
-set(memory_trace ON)
-set(skip_samples ON)
 
 add_definitions(-DGB_DEBUG_NETWORK -DGB_MEASURE_NETWORK_FOR_THIS)
 

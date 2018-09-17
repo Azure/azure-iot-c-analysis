@@ -26,10 +26,10 @@ MEMAR=( $(sed -n -e 's/^MemTotal:[^0-9]*\([0-9][0-9]*\).*/\1/p' -e 's/^SwapTotal
 
 let VSPACE=${MEMAR[0]}+${MEMAR[1]}
 
-make --jobs=$CORES
+make -j
 
 # Run strip from the binaries
-./binary_info/lower_layer/
+#./binary_info/lower_layer/
 
 # Run the analysis applications
 ./binary_info/binary_info -c $cmake_folder
