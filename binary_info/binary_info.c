@@ -222,7 +222,9 @@ int main(int argc, char* argv[])
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_MQTT, BINARY_LL_PATH_FMT);
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_MQTT_WS, BINARY_LL_PATH_FMT);
 
+#ifdef USE_HTTP
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_HTTP, BINARY_LL_PATH_FMT);
+#endif
 
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP, BINARY_LL_PATH_FMT);
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP_WS, BINARY_LL_PATH_FMT);
@@ -234,9 +236,10 @@ int main(int argc, char* argv[])
             (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_MQTT, BINARY_UL_PATH_FMT);
             (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_MQTT_WS, BINARY_UL_PATH_FMT);
 
+#ifdef USE_HTTP
             (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_HTTP, BINARY_UL_PATH_FMT);
+#endif
             (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP, BINARY_UL_PATH_FMT);
-
             (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP_WS, BINARY_UL_PATH_FMT);
         }
 #ifdef USE_PROVISIONING_CLIENT

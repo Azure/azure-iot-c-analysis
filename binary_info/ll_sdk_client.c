@@ -110,6 +110,33 @@ static void connection_status_callback(IOTHUB_CLIENT_CONNECTION_STATUS result, I
     }
 }
 
+#ifdef TWIN_AND_METHODS
+static void device_twin_callback(DEVICE_TWIN_UPDATE_STATE update_state, const unsigned char* payload, size_t size, void* user_ctx)
+{
+    (void)update_state;
+    (void)size;
+    (void)user_ctx;
+
+    (void)printf("Twin Payload %.*s\r\n", size, payload);
+}
+
+static int device_method_callback(const char* method_name, const unsigned char* payload, size_t size, unsigned char** response, size_t* response_size, void* user_ctx)
+{
+    int result;
+    (void)user_ctx;
+
+    (void)printf("Method Name: %s - Payload %.*s\r\n", method_name, size, payload);
+
+    const char deviceMethodResponse[] = "{ \"Response\": \"1HGCM82633A004352\" }";
+    *response_size = sizeof(deviceMethodResponse) - 1;
+    *response = malloc(*response_size);
+    (void)memcpy(*response, deviceMethodResponse, *response_size);
+    result = 200;
+
+    return result;
+}
+#endif
+
 static void iothub_connection_status(IOTHUB_CLIENT_CONNECTION_STATUS result, IOTHUB_CLIENT_CONNECTION_STATUS_REASON reason, void* user_context)
 {
     (void)user_context;
@@ -175,6 +202,10 @@ int main(void)
         // Setting connection status callback to get indication of connection to iothub
         (void)IoTHubDeviceClient_LL_SetConnectionStatusCallback(dev_ll_handle, connection_status_callback, NULL);
 
+#ifdef TWIN_AND_METHODS
+        (void)IoTHubDeviceClient_LL_SetDeviceTwinCallback(dev_ll_handle, device_twin_callback, NULL);
+        (void)IoTHubDeviceClient_LL_SetDeviceMethodCallback(dev_ll_handle, device_method_callback, NULL);
+#endif
         gballoc_init();
         do
         {
