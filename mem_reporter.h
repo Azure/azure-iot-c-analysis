@@ -60,8 +60,8 @@ typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
     typedef enum REPORTER_TYPE_TAG
     {
         REPORTER_TYPE_JSON,
-        REPORTER_TYPE_CVS,
-        REPORTER_TYPE_MD,
+        REPORTER_TYPE_CSV,
+        REPORTER_TYPE_MD
     } REPORTER_TYPE;
 
     typedef struct CONNECTION_INFO_TAG
@@ -85,6 +85,7 @@ typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
         PROTOCOL_TYPE iothub_protocol;
         OPERATION_TYPE operation_type;
         FEATURE_TYPE feature_type;
+        REPORTER_TYPE rpt_type;
         const char* cmake_dir;
         long binary_size;
         const char* output_file;
@@ -98,7 +99,7 @@ typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
     extern void report_binary_sizes(REPORT_HANDLE handle, const BINARY_INFO* bin_info);
     extern void report_network_usage(REPORT_HANDLE handle, const MEM_ANALYSIS_INFO* iot_mem_info);
 
-    extern bool report_write(REPORT_HANDLE handle);
+    extern bool report_write(REPORT_HANDLE handle, const char* output_file);
 
 #ifdef __cplusplus
 }

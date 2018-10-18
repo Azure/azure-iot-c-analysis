@@ -22,23 +22,30 @@
     static const char* BINARY_UL_PATH_FMT = "%s/binary_info/upper_layer/%s%s_%s/%s%s_%s%s";
 #endif
 
-    static const char* const MQTT_BINARY_NAME = "mqtt_transport";
-    static const char* const MQTT_WS_BINARY_NAME = "mqtt_ws_transport";
-    static const char* const AMQP_BINARY_NAME = "amqp_transport";
-    static const char* const AMQP_WS_BINARY_NAME = "amqp_ws_transport";
-    static const char* const HTTP_BINARY_NAME = "http_transport";
+static const char* const REPORT_TYPE_JSON = "json";
+static const char* const REPORT_TYPE_CVS = "csv";
+static const char* const REPORT_TYPE_MD = "md";
+
+static const char* const MQTT_BINARY_NAME = "mqtt_transport";
+static const char* const MQTT_WS_BINARY_NAME = "mqtt_ws_transport";
+static const char* const AMQP_BINARY_NAME = "amqp_transport";
+static const char* const AMQP_WS_BINARY_NAME = "amqp_ws_transport";
+static const char* const HTTP_BINARY_NAME = "http_transport";
 
 static const char* const PROV_BINARY_NAME = "prov_";
 
 static const char* UPPER_LAYER_SUFFIX = "ul";
 static const char* LOWER_LAYER_SUFFIX = "ll";
 
+#define TOLOWER(c) (((c>='A') && (c<='Z'))?c-'A'+'a':c)
+
 typedef enum ARGUEMENT_TYPE_TAG
 {
     ARGUEMENT_TYPE_UNKNOWN,
     ARGUEMENT_TYPE_CMAKE_DIR,
     ARGUEMENT_TYPE_OUTPUT_FILE,
-    ARGUEMENT_TYPE_SKIP_UPPER_LAYER
+    ARGUEMENT_TYPE_SKIP_UPPER_LAYER,
+    ARGUEMENT_TYPE_OUTPUT_TYPE
 } ARGUEMENT_TYPE;
 
 static const char* get_binary_file(PROTOCOL_TYPE type)
@@ -147,6 +154,7 @@ static int calculate_filesize(BINARY_INFO* bin_info, REPORT_HANDLE report_handle
     return result;
 }
 
+// -c "<CMAKE DIRECTORY>" -t <report type - json, csv> -l
 static int parse_command_line(int argc, char* argv[], BINARY_INFO* bin_info)
 {
     int result = 0;
@@ -156,7 +164,26 @@ static int parse_command_line(int argc, char* argv[], BINARY_INFO* bin_info)
     {
         if (argument_type == ARGUEMENT_TYPE_UNKNOWN)
         {
-            if (argv[index][0] == '-' && (argv[index][1] == 'c' || argv[index][1] == 'C'))
+            if (argv[index][0] == '-')
+            {
+                switch (TOLOWER(argv[index][1]))
+                {
+                    case 'c':
+                        argument_type = ARGUEMENT_TYPE_CMAKE_DIR;
+                        break;
+                    case 'o':
+                        argument_type = ARGUEMENT_TYPE_OUTPUT_FILE;
+                        break;
+                    case 'l':
+                        bin_info->skip_ul = argv[index];
+                        argument_type = ARGUEMENT_TYPE_UNKNOWN;
+                        break;
+                    case 't':
+                        argument_type = ARGUEMENT_TYPE_OUTPUT_TYPE;
+                        break;
+                }
+            }
+            /*if (argv[index][0] == '-' && (argv[index][1] == 'c' || argv[index][1] == 'C'))
             {
                 argument_type = ARGUEMENT_TYPE_CMAKE_DIR;
             }
@@ -168,7 +195,7 @@ static int parse_command_line(int argc, char* argv[], BINARY_INFO* bin_info)
             {
                 bin_info->skip_ul = argv[index];
                 argument_type = ARGUEMENT_TYPE_UNKNOWN;
-            }
+            }*/
         }
         else
         {
@@ -179,6 +206,25 @@ static int parse_command_line(int argc, char* argv[], BINARY_INFO* bin_info)
                 break;
             case ARGUEMENT_TYPE_OUTPUT_FILE:
                 bin_info->output_file = argv[index];
+                break;
+            case ARGUEMENT_TYPE_OUTPUT_TYPE:
+                if (strcmp(argv[index], REPORT_TYPE_JSON) == 0)
+                {
+                    bin_info->rpt_type = REPORTER_TYPE_JSON;
+                }
+                else if (strcmp(argv[index], REPORT_TYPE_CVS) == 0)
+                {
+                    bin_info->rpt_type = REPORTER_TYPE_CSV;
+                }
+                /*else if (strcmp(argv[index], REPORT_TYPE_MD) == 0)
+                {
+                    bin_info->rpt_type = REPORTER_TYPE_MD;
+                }*/
+                else
+                {
+                    // Not supported
+                    result = __LINE__;
+                }
                 break;
             case ARGUEMENT_TYPE_UNKNOWN:
             default:
@@ -208,7 +254,7 @@ int main(int argc, char* argv[])
         (void)printf("Failure cmake directory command line option not supplied\r\n");
         result = __LINE__;
     }
-    else if ((report_handle = report_initialize(REPORTER_TYPE_JSON)) == NULL)
+    else if ((report_handle = report_initialize(bin_info.rpt_type)) == NULL)
     {
         (void)printf("Failure creating report handle\r\n");
         result = __LINE__;
@@ -258,7 +304,7 @@ int main(int argc, char* argv[])
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP, BINARY_UL_PATH_FMT);
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP_WS, BINARY_UL_PATH_FMT);
 #endif
-        report_write(report_handle);
+        report_write(report_handle, bin_info.output_file);
 
         report_deinitialize(report_handle);
         result = 0;

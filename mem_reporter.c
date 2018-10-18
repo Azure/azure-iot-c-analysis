@@ -38,9 +38,9 @@ static const char* const BINARY_SIZE_JSON_FMT = "{ \"type\": \"ROM\", \"dateTime
 static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"type\": \"RAM\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgCount\" : %d, \"maxMemory\" : \"%s\", \"currMemory\" : \"%s\", \"numAlloc\" : \"%s\" } }";
 static const char* const NETWORK_ANALYSIS_JSON_FMT = "{ \"type\": \"NETWORK\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgPayload\" : %d, \"bytesSent\" : \"%s\", \"numSends\" : \"%s\", \"recvBytes\" : \"%s\", \"numRecv\" : \"%s\" } }";
 
-static const char* const BINARY_SIZE_CVS_FMT = "%s, %s, %s, %s, %s, %s, %s, %ld";
-static const char* const HEAP_ANALYSIS_CVS_FMT = "%s, %s, %s, %s, %s, %s, %s, %d, %zu, %zu, %zu";
-static const char* const NETWORK_ANALYSIS_CVS_FMT = "%s, %s, %s, %s, %s, %s, %d, %" PRIu64 ", %ld, %" PRIu64 ", %ld";
+static const char* const BINARY_SIZE_CSV_FMT = "%s, %s, %s, %s, %s, %s";
+static const char* const HEAP_ANALYSIS_CSV_FMT = "%s, %s, %s, %s, %s, %s, %s, %d, %zu, %zu, %zu";
+static const char* const NETWORK_ANALYSIS_CSV_FMT = "%s, %s, %s, %s, %s, %s, %d, %" PRIu64 ", %ld, %" PRIu64 ", %ld";
 
 #ifdef NO_LOGGING
 static const char* const LOGGING_INCLUDED = "false";
@@ -53,11 +53,25 @@ static const char* const UPLOAD_INCLUDED = "false";
 static const char* const UPLOAD_INCLUDED = "true";
 #endif
 
+typedef struct JSON_REPORT_INFO_TAG
+{
+    JSON_Value* root_value;
+    JSON_Object* analysis_node;
+} JSON_REPORT_INFO;
+
+typedef struct CSV_REPORT_INFO_TAG
+{
+    STRING_HANDLE csv_list;
+} CSV_REPORT_INFO;
+
 typedef struct REPORT_INFO_TAG
 {
     REPORTER_TYPE type;
-    JSON_Value* root_value;
-    JSON_Object* analysis_node;
+    union
+    {
+        JSON_REPORT_INFO json_info;
+        CSV_REPORT_INFO csv_info;
+    } rpt_value;
 } REPORT_INFO;
 
 static void format_value(uint64_t value, char formatting[FORMAT_MAX_LEN])
@@ -112,6 +126,15 @@ static void format_bytes(long bytes, char formatting[FORMAT_MAX_LEN])
     }
 }
 
+static void add_node_to_csv(const char* field_data, const REPORT_INFO* report_info)
+{
+    if (STRING_sprintf(report_info->rpt_value.csv_info.csv_list, "%s\r\n", field_data) != 0)
+    //if (STRING_concat(report_info->rpt_value.csv_info.csv_list, field_data) != 0)
+    {
+        (void)printf("ERROR: Failed setting field value\r\n");
+    }
+}
+
 static void add_node_to_json(const char* node_data, const REPORT_INFO* report_info)
 {
     JSON_Value* json_value;
@@ -121,7 +144,7 @@ static void add_node_to_json(const char* node_data, const REPORT_INFO* report_in
         JSON_Array* base_array;
         JSON_Value* json_analysis;
 
-        if ((json_analysis = json_object_get_value(report_info->analysis_node, NODE_SDK_ANALYSIS)) == NULL)
+        if ((json_analysis = json_object_get_value(report_info->rpt_value.json_info.analysis_node, NODE_SDK_ANALYSIS)) == NULL)
         {
             (void)printf("ERROR: Failed getting node object value\r\n");
         }
@@ -148,6 +171,33 @@ static void upload_to_azure(const char* data)
 {
     (void)data;
     // TODO upload to azure iot
+}
+
+static int write_to_storage(const char* report_data, const char* output_file, REPORTER_TYPE type)
+{
+    int result;
+    if (output_file == NULL)
+    {
+        (void)printf("%s\r\n", report_data);
+        result = 0;
+    }
+    else
+    {
+        const char* filemode = "a";
+        if (type == REPORTER_TYPE_JSON)
+        {
+            filemode = "w";
+        }
+        FILE* file = fopen(output_file, filemode);
+        if (file != NULL)
+        {
+            size_t len = strlen(report_data);
+            fwrite(report_data, sizeof(char), len, file);
+            fclose(file);
+        }
+        result = 0;
+    }
+    return result;
 }
 
 static void get_report_date(char* date, size_t length)
@@ -273,9 +323,9 @@ static const char* get_format_value(const REPORT_INFO* report_info, OPERATION_TY
     switch (type)
     {
         case OPERATION_MEMORY:
-            if (report_info->type == REPORTER_TYPE_CVS)
+            if (report_info->type == REPORTER_TYPE_CSV)
             {
-                result = HEAP_ANALYSIS_CVS_FMT;
+                result = HEAP_ANALYSIS_CSV_FMT;
             }
             else
             {
@@ -283,9 +333,9 @@ static const char* get_format_value(const REPORT_INFO* report_info, OPERATION_TY
             }
             break;
         case OPERATION_NETWORK:
-            if (report_info->type == REPORTER_TYPE_CVS)
+            if (report_info->type == REPORTER_TYPE_CSV)
             {
-                result = NETWORK_ANALYSIS_CVS_FMT;
+                result = NETWORK_ANALYSIS_CSV_FMT;
             }
             else
             {
@@ -293,9 +343,9 @@ static const char* get_format_value(const REPORT_INFO* report_info, OPERATION_TY
             }
             break;
         case OPERATION_BINARY_SIZE:
-            if (report_info->type == REPORTER_TYPE_CVS)
+            if (report_info->type == REPORTER_TYPE_CSV)
             {
-                result = BINARY_SIZE_CVS_FMT;
+                result = BINARY_SIZE_CSV_FMT;
             }
             else
             {
@@ -332,14 +382,14 @@ REPORT_HANDLE report_initialize(REPORTER_TYPE type)
             }
             else
             {
-                result->root_value = json_parse_string(STRING_c_str(json_node));
-                if (result->root_value == NULL)
+                result->rpt_value.json_info.root_value = json_parse_string(STRING_c_str(json_node));
+                if (result->rpt_value.json_info.root_value == NULL)
                 {
                     (void)printf("Failure parsing value node\r\n");
                     free(result);
                     result = NULL;
                 }
-                else if ((result->analysis_node = json_value_get_object(result->root_value)) == NULL)
+                else if ((result->rpt_value.json_info.analysis_node = json_value_get_object(result->rpt_value.json_info.root_value)) == NULL)
                 {
                     (void)printf("Failure getting value node\r\n");
                     free(result);
@@ -347,14 +397,26 @@ REPORT_HANDLE report_initialize(REPORTER_TYPE type)
                 }
                 /*else
                 {
-                    char* test = json_serialize_to_string_pretty(result->root_value);
+                    char* test = json_serialize_to_string_pretty(result->json_info.root_value);
                     (void)printf("Debug:\r\n%s\r\n", test);
                 }*/
             }
             STRING_delete(json_node);
         }
+        else if (result->type == REPORTER_TYPE_CSV)
+        {
+            if ((result->rpt_value.csv_info.csv_list = STRING_new()) == NULL)
+            {
+                (void)printf("Failure creating string value for csv\r\n");
+                free(result);
+                result = NULL;
+            }
+        }
         else
         {
+            (void)printf("Failure report mode not supported\r\n");
+            free(result);
+            result = NULL;
         }
     }
     return result;
@@ -365,7 +427,14 @@ void report_deinitialize(REPORT_HANDLE handle)
     // Close the file
     if (handle != NULL)
     {
-        json_value_free(handle->root_value);
+        if (handle->type == REPORTER_TYPE_JSON)
+        {
+            json_value_free(handle->rpt_value.json_info.root_value);
+        }
+        else if (handle->type == REPORTER_TYPE_CSV)
+        {
+            STRING_delete(handle->rpt_value.csv_info.csv_list);
+        }
         free(handle);
     }
 }
@@ -388,7 +457,14 @@ void report_binary_sizes(REPORT_HANDLE handle, const BINARY_INFO* bin_info)
         }
         else
         {
-            add_node_to_json(STRING_c_str(binary_data), handle);
+            if (bin_info->rpt_type == REPORTER_TYPE_CSV)
+            {
+                add_node_to_csv(STRING_c_str(binary_data), handle);
+            }
+            else
+            {
+                add_node_to_json(STRING_c_str(binary_data), handle);
+            }
             STRING_delete(binary_data);
         }
     }
@@ -452,7 +528,7 @@ void report_network_usage(REPORT_HANDLE handle, const MEM_ANALYSIS_INFO* iot_mem
     }
 }
 
-bool report_write(REPORT_HANDLE handle)
+bool report_write(REPORT_HANDLE handle, const char* output_file)
 {
     bool result;
     if (handle == NULL)
@@ -461,9 +537,16 @@ bool report_write(REPORT_HANDLE handle)
     }
     else
     {
-        char* test = json_serialize_to_string_pretty(handle->root_value);
-        (void)printf("\r\n%s\r\n", test);
-        json_free_serialized_string(test);
+        if (handle->type == REPORTER_TYPE_JSON)
+        {
+            char* report_data = json_serialize_to_string_pretty(handle->rpt_value.json_info.root_value);
+            write_to_storage(report_data, output_file, handle->type);
+            json_free_serialized_string(report_data);
+        }
+        else
+        {
+            write_to_storage(STRING_c_str(handle->rpt_value.csv_info.csv_list), output_file, handle->type);
+        }
         result = true;
     }
     return result;
