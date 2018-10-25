@@ -12,7 +12,7 @@ phases:
   - script: 'sudo ./script/execute_analysis.sh'
     displayName: 'Analysis Run'
     env:
-      IOTHUB_CONNECTION_STRING: $(IOT-DPS-CONNECTION-STRING)
+      IOTHUB_CONNECTION_STRING: $(IOTHUB-CONNECTION-STRING)
   - script: sudo rm -rf $(Agent.BuildDirectory)/*
     displayName: 'cleanup'
     condition: always()
