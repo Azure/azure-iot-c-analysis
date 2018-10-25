@@ -5,7 +5,7 @@ resources:
 phases:
 - phase: linux
   variables:
-    _PREVIEW_VSTS_DOCKER_IMAGE: "aziotbld/vsts-linux-c-ubuntu"
+    _PREVIEW_VSTS_DOCKER_IMAGE: "aziotbld/ubuntu-clang"
   queue: aziotbld-lin01
   displayName: 'analysis'
   steps:
