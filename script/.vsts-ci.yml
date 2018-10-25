@@ -9,7 +9,7 @@ phases:
   queue: aziotbld-lin01
   displayName: 'analysis'
   steps:
-  - script: 'sudo ./script/execute_analysis.sh'
+  - script: 'sudo -E ./script/execute_analysis.sh'
     displayName: 'Analysis Run'
     env:
       IOTHUB_CONNECTION_STRING: $(IOTHUB-CONNECTION-STRING)

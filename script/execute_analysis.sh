@@ -10,11 +10,6 @@ cmake_folder=$repo_root"/cmake/analysis_linux"
 
 conn_string="${IOTHUB_CONNECTION_STRING}"
 
-echo "Environment var: $conn_string"
-if [[ -z "$conn_string" ]]; then
-    echo "Conn string is not empty"
-fi
-
 rm -r -f $cmake_folder
 mkdir -p $cmake_folder
 pushd $cmake_folder
