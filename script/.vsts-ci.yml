@@ -5,15 +5,14 @@ resources:
 phases:
 - phase: linux
   variables:
-    _PREVIEW_VSTS_DOCKER_IMAGE: "aziotbld/linux-c-ubuntu-16.04:latest"
+    _PREVIEW_VSTS_DOCKER_IMAGE: "aziotbld/vsts-linux-c-ubuntu"
   queue: aziotbld-lin01
   displayName: 'analysis'
   steps:
   - script: 'sudo ./script/execute_analysis.sh'
+    displayName: 'Analysis Run'
     env:
       IOTHUB_CONNECTION_STRING: $(IOT-DPS-CONNECTION-STRING)
-  - task: DeleteFiles@1
-    displayName: 'Delete files from $(Agent.BuildDirectory)'
-    inputs:
-      SourceFolder: '$(Agent.BuildDirectory)'
+  - script: sudo rm -rf $(Agent.BuildDirectory)/*
+    displayName: 'cleanup'
     condition: always()
