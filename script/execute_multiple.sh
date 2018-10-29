@@ -9,7 +9,7 @@ openssl version
 
 script_dir=$(cd "$(dirname "$0")" && pwd)
 repo_root=$(cd "${script_dir}/.." && pwd)
-cmake_folder=$repo_root"/cmake/analysis_linux"
+cmake_folder=$repo_root"/cmake/analysis_multiple"
 
 declare -a arr=(
     "-Dsdk_branch=lts_10_2018"
@@ -20,15 +20,15 @@ declare -a arr=(
 
 for item in "${arr[@]}"
 do
-    rm -r -f $build_folder
-    mkdir -p $build_folder
+    rm -r -f $cmake_folder
+    mkdir -p $cmake_folder
     pushd $cmake_folder
 
     echo "executing cmake/make with options <<$item>>"
     cmake $repo_root -DCMAKE_BUILD_TYPE=Release -Dsdk_branch="$item"
 
     # Run make, but don't show the output
-    make -j --silent
+    make -quite -j
 
     # Run the analysis applications
     echo "Retrieving binary info"
