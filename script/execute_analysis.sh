@@ -6,6 +6,7 @@ set -e
 
 gcc --version
 openssl version
+uname -r
 
 script_dir=$(cd "$(dirname "$0")" && pwd)
 repo_root=$(cd "${script_dir}/.." && pwd)
@@ -16,9 +17,9 @@ conn_string="${IOTHUB_CONNECTION_STRING}"
 rm -r -f $cmake_folder
 mkdir -p $cmake_folder
 pushd $cmake_folder
-cmake $repo_root -DCMAKE_BUILD_TYPE=Release -Duse_prov_client:BOOL=ON
+cmake $repo_root -DCMAKE_BUILD_TYPE=Release # -Duse_prov_client:BOOL=ON
 
-make -j --silent
+make -j >/dev/null
 
 # Run strip from the binaries
 #./binary_info/lower_layer/

@@ -6,29 +6,32 @@ set -e
 
 gcc --version
 openssl version
+uname -r
 
 script_dir=$(cd "$(dirname "$0")" && pwd)
 repo_root=$(cd "${script_dir}/.." && pwd)
 cmake_folder=$repo_root"/cmake/analysis_multiple"
 
 declare -a arr=(
-    "-Dsdk_branch=lts_10_2018"
-    "-Dsdk_branch=2018-09-11"
-    "-Dsdk_branch=2018-07-11"
-    "-Dsdk_branch=master"
+    "lts_10_2018"
+    "2018-09-11"
+    "master"
 )
 
 for item in "${arr[@]}"
 do
     rm -r -f $cmake_folder
+    # Remove the SDK
+    rm -r -f "$repo_root/deps/c-sdk"
     mkdir -p $cmake_folder
     pushd $cmake_folder
 
     echo "executing cmake/make with options <<$item>>"
-    cmake $repo_root -DCMAKE_BUILD_TYPE=Release -Dsdk_branch="$item"
+    cmake $repo_root -DCMAKE_BUILD_TYPE=Release -Dsdk_branch="$item" -Duse_http=OFF
 
+    echo "building SDK"
     # Run make, but don't show the output
-    make -quite -j
+    make -j >/dev/null
 
     # Run the analysis applications
     echo "Retrieving binary info"

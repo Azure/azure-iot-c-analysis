@@ -21,7 +21,7 @@ include(ExternalProject)
 # Check out Git submodules.
 if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk/.gitmodules")
     message("running git clone of the c-sdk into ${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk")
-    execute_process (COMMAND git clone https://github.com/Azure/azure-iot-sdk-c.git --recursive -b ${sdk_branch} ${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk)
+    execute_process (COMMAND git clone https://github.com/Azure/azure-iot-sdk-c.git --recursive -q --no-tags -b ${sdk_branch} ${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk)
 else()
     if (${refresh_sdk})
         execute_process (COMMAND git pull origin ${sdk_branch} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk")
