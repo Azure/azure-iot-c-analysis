@@ -27,7 +27,7 @@ do
     pushd $cmake_folder
 
     echo "executing cmake/make with options <<$item>>"
-    cmake $repo_root -DCMAKE_BUILD_TYPE=Release -Dsdk_branch="$item" -Duse_http=OFF
+    cmake $repo_root -DCMAKE_BUILD_TYPE=Release -Dsdk_branch="$item" -Duse_http=OFF >/dev/null
 
     echo "building SDK"
     # Run make, but don't show the output

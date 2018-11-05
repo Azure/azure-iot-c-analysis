@@ -273,15 +273,15 @@ static int parse_command_line(int argc, char* argv[], MEM_ANALYTIC_INFO* mem_inf
 
 static void send_network_info(CONNECTION_INFO* conn_info, REPORT_HANDLE report_handle)
 {
-    // AMQP Sending
-#ifdef USE_AMQP
-    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_AMQP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-#endif
     // MQTT Sending
 #ifdef USE_MQTT
     initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_MQTT, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
     initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_MQTT_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+#endif
+    // AMQP Sending
+#ifdef USE_AMQP
+    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_AMQP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
 #endif
 }
 

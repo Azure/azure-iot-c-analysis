@@ -17,8 +17,11 @@ conn_string="${IOTHUB_CONNECTION_STRING}"
 rm -r -f $cmake_folder
 mkdir -p $cmake_folder
 pushd $cmake_folder
-cmake $repo_root -DCMAKE_BUILD_TYPE=Release # -Duse_prov_client:BOOL=ON
 
+echo "Running cmake with -DCMAKE_BUILD_TYPE=Release"
+cmake $repo_root -DCMAKE_BUILD_TYPE=Release  >/dev/null # -Duse_prov_client:BOOL=ON
+
+echo "Building SDK"
 make -j >/dev/null
 
 # Run strip from the binaries
