@@ -304,8 +304,7 @@ int main(int argc, char* argv[])
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP, BINARY_UL_PATH_FMT);
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP_WS, BINARY_UL_PATH_FMT);
 #endif
-        report_write(report_handle, bin_info.output_file);
-
+        report_write(report_handle, bin_info.output_file, NULL);
         report_deinitialize(report_handle);
         result = 0;
     }

@@ -14,6 +14,11 @@
 
 #include "parson.h"
 
+#include "iothub.h"
+#include "iothub_device_client.h"
+#include "iothub_message.h"
+#include "iothubtransportmqtt.h"
+
 #define USE_MSG_BYTE_ARRAY  1
 #define MESSAGES_TO_USE     1
 #define MAX_DATA_LEN        128
@@ -167,10 +172,61 @@ static void add_node_to_json(const char* node_data, const REPORT_INFO* report_in
     }
 }
 
-static void upload_to_azure(const char* data)
+static void send_confirm_callback(IOTHUB_CLIENT_CONFIRMATION_RESULT result, void* userContextCallback)
 {
-    (void)data;
-    // TODO upload to azure iot
+    int* msg_delievered = (int*)userContextCallback;
+    if (msg_delievered != NULL)
+    {
+        if (result == IOTHUB_CLIENT_CONFIRMATION_OK)
+        {
+            *msg_delievered = 1;
+        }
+        else
+        {
+            *msg_delievered = 2;
+        }
+    }
+    // When a message is sent this callback will get envoked
+}
+
+static bool upload_to_azure(const char* connection_string, const char* data)
+{
+    bool result;
+    int msg_delivered = 0;
+    IOTHUB_DEVICE_CLIENT_LL_HANDLE dev_ll_handle;
+    (void)IoTHub_Init();
+
+    dev_ll_handle = IoTHubDeviceClient_LL_CreateFromConnectionString(connection_string, MQTT_Protocol);
+    if (dev_ll_handle != NULL)
+    {
+        IOTHUB_MESSAGE_HANDLE message_handle;
+        message_handle = IoTHubMessage_CreateFromString(data);
+        if (message_handle != NULL)
+        {
+            if (IoTHubDeviceClient_LL_SendEventAsync(dev_ll_handle, message_handle, send_confirm_callback, &msg_delivered) == IOTHUB_CLIENT_OK)
+            {
+                do
+                {
+                    IoTHubDeviceClient_LL_DoWork(dev_ll_handle);
+                } while (msg_delivered == 0);
+            }
+            IoTHubMessage_Destroy(message_handle);
+        }
+        IoTHubDeviceClient_LL_Destroy(dev_ll_handle);
+    }
+    IoTHub_Deinit();
+
+    if (msg_delivered == 1)
+    {
+        result = true;
+        (void)printf("Data Succesfully uploaded to Azure IoTHub\r\n");
+    }
+    else
+    {
+        result = false;
+        (void)printf("Failed to uploaded data to Azure IoTHub\r\n");
+    }
+    return result;
 }
 
 static int write_to_storage(const char* report_data, const char* output_file, REPORTER_TYPE type)
@@ -528,7 +584,7 @@ void report_network_usage(REPORT_HANDLE handle, const MEM_ANALYSIS_INFO* iot_mem
     }
 }
 
-bool report_write(REPORT_HANDLE handle, const char* output_file)
+bool report_write(REPORT_HANDLE handle, const char* output_file, const char* conn_string)
 {
     bool result;
     if (handle == NULL)
@@ -540,12 +596,27 @@ bool report_write(REPORT_HANDLE handle, const char* output_file)
         if (handle->type == REPORTER_TYPE_JSON)
         {
             char* report_data = json_serialize_to_string_pretty(handle->rpt_value.json_info.root_value);
-            write_to_storage(report_data, output_file, handle->type);
+            if (output_file != NULL)
+            {
+                write_to_storage(report_data, output_file, handle->type);
+            }
+            if (conn_string != NULL)
+            {
+                upload_to_azure(conn_string, report_data);
+            }
             json_free_serialized_string(report_data);
         }
         else
         {
-            write_to_storage(STRING_c_str(handle->rpt_value.csv_info.csv_list), output_file, handle->type);
+            const char* report_data = STRING_c_str(handle->rpt_value.csv_info.csv_list);
+            if (output_file != NULL)
+            {
+                write_to_storage(report_data, output_file, handle->type);
+            }
+            if (conn_string != NULL)
+            {
+                upload_to_azure(conn_string, report_data);
+            }
         }
         result = true;
     }

@@ -19,12 +19,12 @@ mkdir -p $cmake_folder
 pushd $cmake_folder
 
 echo "Running cmake with -DCMAKE_BUILD_TYPE=Release"
-cmake $repo_root -DCMAKE_BUILD_TYPE=Release  >/dev/null # -Duse_prov_client:BOOL=ON
+cmake $repo_root -DCMAKE_BUILD_TYPE=Release >/dev/null # -Duse_prov_client:BOOL=ON
 
 echo "Building SDK"
 make -j >/dev/null
 
-# Run strip from the binaries
+# Run strip from the binaries./
 #./binary_info/lower_layer/
 
 # Run the analysis applications
