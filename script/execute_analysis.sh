@@ -13,6 +13,7 @@ repo_root=$(cd "${script_dir}/.." && pwd)
 cmake_folder=$repo_root"/cmake/analysis_linux"
 
 conn_string="${IOTHUB_CONNECTION_STRING}"
+rpt_conn_string="${REPORT_CONNECTION_STRING}"
 
 rm -r -f $cmake_folder
 mkdir -p $cmake_folder
@@ -29,7 +30,7 @@ make -j >/dev/null
 
 # Run the analysis applications
 echo "Retrieving binary info"
-./binary_info/binary_info -c $cmake_folder
+./binary_info/binary_info -c $cmake_folder -s $rpt_conn_string
 echo "retrieving telemetry memory info"
 ./memory/telemetry_memory/telemetry_memory -c $conn_string
 echo "retrieving telemetry network info"
