@@ -45,7 +45,8 @@ typedef enum ARGUEMENT_TYPE_TAG
     ARGUEMENT_TYPE_CMAKE_DIR,
     ARGUEMENT_TYPE_OUTPUT_FILE,
     ARGUEMENT_TYPE_SKIP_UPPER_LAYER,
-    ARGUEMENT_TYPE_OUTPUT_TYPE
+    ARGUEMENT_TYPE_OUTPUT_TYPE,
+    ARGUEMENT_TYPE_CONN_STRING
 } ARGUEMENT_TYPE;
 
 static const char* get_binary_file(PROTOCOL_TYPE type)
@@ -181,6 +182,9 @@ static int parse_command_line(int argc, char* argv[], BINARY_INFO* bin_info)
                     case 't':
                         argument_type = ARGUEMENT_TYPE_OUTPUT_TYPE;
                         break;
+                    case 's':
+                        argument_type = ARGUEMENT_TYPE_CONN_STRING;
+                        break;
                 }
             }
             /*if (argv[index][0] == '-' && (argv[index][1] == 'c' || argv[index][1] == 'C'))
@@ -225,6 +229,9 @@ static int parse_command_line(int argc, char* argv[], BINARY_INFO* bin_info)
                     // Not supported
                     result = __LINE__;
                 }
+                break;
+            case ARGUEMENT_TYPE_CONN_STRING:
+                bin_info->azure_conn_string = argv[index];
                 break;
             case ARGUEMENT_TYPE_UNKNOWN:
             default:
@@ -304,7 +311,7 @@ int main(int argc, char* argv[])
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP, BINARY_UL_PATH_FMT);
         (void)calculate_filesize(&bin_info, report_handle, PROTOCOL_AMQP_WS, BINARY_UL_PATH_FMT);
 #endif
-        report_write(report_handle, bin_info.output_file, NULL);
+        report_write(report_handle, bin_info.output_file, bin_info.azure_conn_string);
         report_deinitialize(report_handle);
         result = 0;
     }

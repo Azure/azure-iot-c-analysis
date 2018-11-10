@@ -36,7 +36,7 @@ static REPORTER_TYPE g_report_type = REPORTER_TYPE_JSON;
 static const char* const UNKNOWN_TYPE = "unknown";
 static const char* const NODE_SDK_ANALYSIS = "sdkAnalysis";
 static const char* const NODE_BASE_ARRAY = "analysisItem";
-static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"sdkAnalysis\" : { \"osType\": \"%s\", \"uploadEnabled\": \"%s\", \"logEnabled\": \"%s\", \"analysisItem\" : [] } }";
+static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"sdkAnalysis\" : { \"osType\": \"%s\" \"version\": \"1.0.0\", \"uploadEnabled\": \"%s\", \"logEnabled\": \"%s\", \"analysisItem\" : [] } }";
 static const char* const NODE_OPERATING_SYSTEM = "osType";
 
 static const char* const BINARY_SIZE_JSON_FMT = "{ \"type\": \"ROM\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"binarySize\" : \"%s\" }";

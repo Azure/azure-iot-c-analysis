@@ -89,6 +89,7 @@ typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
         const char* cmake_dir;
         long binary_size;
         const char* output_file;
+        const char* azure_conn_string;
         bool skip_ul;
     } BINARY_INFO;
 
@@ -99,7 +100,7 @@ typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
     extern void report_binary_sizes(REPORT_HANDLE handle, const BINARY_INFO* bin_info);
     extern void report_network_usage(REPORT_HANDLE handle, const MEM_ANALYSIS_INFO* iot_mem_info);
 
-    extern bool report_write(REPORT_HANDLE handle, const char* output_file);
+    extern bool report_write(REPORT_HANDLE handle, const char* output_file, const char* conn_string);
 
 #ifdef __cplusplus
 }

@@ -360,7 +360,7 @@ int main(int argc, char* argv[])
         platform_deinit();
         gbnetwork_deinit();
 
-        report_write(report_handle, NULL);
+        report_write(report_handle, NULL, NULL);
 
         report_deinitialize(report_handle);
 
