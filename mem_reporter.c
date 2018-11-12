@@ -36,7 +36,7 @@ static REPORTER_TYPE g_report_type = REPORTER_TYPE_JSON;
 static const char* const UNKNOWN_TYPE = "unknown";
 static const char* const NODE_SDK_ANALYSIS = "sdkAnalysis";
 static const char* const NODE_BASE_ARRAY = "analysisItem";
-static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"sdkAnalysis\" : { \"osType\": \"%s\" \"version\": \"1.0.0\", \"uploadEnabled\": \"%s\", \"logEnabled\": \"%s\", \"analysisItem\" : [] } }";
+static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"sdkAnalysis\" : { \"osType\": \"%s\", \"version\": \"1.0.0\", \"uploadEnabled\": \"%s\", \"logEnabled\": \"%s\", \"analysisItem\" : [] } }";
 static const char* const NODE_OPERATING_SYSTEM = "osType";
 
 static const char* const BINARY_SIZE_JSON_FMT = "{ \"type\": \"ROM\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"binarySize\" : \"%s\" }";
@@ -232,12 +232,7 @@ static bool upload_to_azure(const char* connection_string, const char* data)
 static int write_to_storage(const char* report_data, const char* output_file, REPORTER_TYPE type)
 {
     int result;
-    if (output_file == NULL)
-    {
-        (void)printf("%s\r\n", report_data);
-        result = 0;
-    }
-    else
+    if (output_file != NULL)
     {
         const char* filemode = "a";
         if (type == REPORTER_TYPE_JSON)
@@ -596,15 +591,29 @@ bool report_write(REPORT_HANDLE handle, const char* output_file, const char* con
         if (handle->type == REPORTER_TYPE_JSON)
         {
             char* report_data = json_serialize_to_string_pretty(handle->rpt_value.json_info.root_value);
-            if (output_file != NULL)
+            if (report_data == NULL)
             {
-                write_to_storage(report_data, output_file, handle->type);
+                (void)printf("Failed serializing json\r\n");
+                result = false;
             }
-            if (conn_string != NULL)
+            else
             {
-                upload_to_azure(conn_string, report_data);
+                // Write to a file or print out string
+                if (output_file != NULL)
+                {
+                    write_to_storage(report_data, output_file, handle->type);
+                }
+                else
+                {
+                    (void)printf("%s\r\n", report_data);
+                }
+
+                if (conn_string != NULL)
+                {
+                    upload_to_azure(conn_string, report_data);
+                }
+                json_free_serialized_string(report_data);
             }
-            json_free_serialized_string(report_data);
         }
         else
         {
