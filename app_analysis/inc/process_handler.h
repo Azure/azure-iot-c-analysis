@@ -14,10 +14,10 @@ extern "C" {
 #include <stdint.h>
 #endif
 
-typedef void* PROCESS_HANDLER_HANDLE;
-//typedef struct PROCESS_HANDLER_INFO* PROCESS_HANDLER_HANDLE;
+typedef struct PROCESS_HANDLER_INFO_TAG* PROCESS_HANDLER_HANDLE;
 
 extern PROCESS_HANDLER_HANDLE process_handler_create(const char* process_path);
+extern PROCESS_HANDLER_HANDLE process_handler_create_by_pid(int process_id);
 extern void process_handler_destroy(PROCESS_HANDLER_HANDLE handle);
 
 extern int process_handler_start(PROCESS_HANDLER_HANDLE handle, const char* cmdline_args);

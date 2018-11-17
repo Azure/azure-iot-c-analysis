@@ -23,10 +23,10 @@ else()
     )
 endif(WIN32)
 
-message("${CMAKE_CURRENT_LIST_DIR}/inc")
-
 include_directories(${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_LIST_DIR}/inc)
-#include_directories(${SDK_INCLUDE_DIRS})
+include_directories(${SHARED_UTIL_INC_FOLDER})
+
 #set(BINARY_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 add_executable(app_analysis ${app_analysis_c_files} ${app_analysis_h_files})
+target_link_libraries(app_analysis aziotsharedutil)

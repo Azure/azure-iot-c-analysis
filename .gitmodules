@@ -4,3 +4,6 @@
 [submodule "deps/parson"]
 	path = deps/parson
 	url = https://github.com/kgabis/parson.git
+[submodule "deps/c-utility"]
+	path = deps/c-utility
+	url = https://github.com/Azure/azure-c-shared-utility.git
