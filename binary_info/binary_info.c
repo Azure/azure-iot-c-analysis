@@ -49,10 +49,10 @@ typedef enum ARGUEMENT_TYPE_TAG
     ARGUEMENT_TYPE_CONN_STRING
 } ARGUEMENT_TYPE;
 
-static const char* get_binary_file(PROTOCOL_TYPE type)
+static const char* get_binary_file(PROTOCOL_TYPE rpt_type)
 {
     const char* result;
-    switch (type)
+    switch (rpt_type)
     {
         case PROTOCOL_MQTT:
             result = MQTT_BINARY_NAME;
@@ -78,10 +78,10 @@ static const char* get_binary_file(PROTOCOL_TYPE type)
     return result;
 }
 
-static bool is_lower_layer(FEATURE_TYPE type)
+static bool is_lower_layer(FEATURE_TYPE rpt_type)
 {
     bool result;
-    switch (type)
+    switch (rpt_type)
     {
         case FEATURE_TELEMETRY_LL:
         case FEATURE_C2D_LL:
@@ -97,11 +97,11 @@ static bool is_lower_layer(FEATURE_TYPE type)
     return result;
 }
 
-static int calculate_filesize(BINARY_INFO* bin_info, REPORT_HANDLE report_handle, PROTOCOL_TYPE type, const char* binary_path_fmt)
+static int calculate_filesize(BINARY_INFO* bin_info, REPORT_HANDLE report_handle, PROTOCOL_TYPE rpt_type, const char* binary_path_fmt)
 {
     int result;
     FILE* target_file;
-    const char* binary_name = get_binary_file(type);
+    const char* binary_name = get_binary_file(rpt_type);
     if (binary_name == NULL)
     {
         (void)printf("Failed getting binary filename\r\n");
@@ -125,7 +125,7 @@ static int calculate_filesize(BINARY_INFO* bin_info, REPORT_HANDLE report_handle
             prov_exe = PROV_BINARY_NAME;
         }
 
-        bin_info->iothub_protocol = type;
+        bin_info->iothub_protocol = rpt_type;
         STRING_HANDLE filename_handle = STRING_construct_sprintf(binary_path_fmt, bin_info->cmake_dir, prov_exe, binary_name, suffix, prov_exe, binary_name, suffix, EXECUTABLE_EXT);
         if (filename_handle == NULL)
         {
@@ -155,7 +155,7 @@ static int calculate_filesize(BINARY_INFO* bin_info, REPORT_HANDLE report_handle
     return result;
 }
 
-// -c "<CMAKE DIRECTORY>" -t <report type - json, csv> -l
+// -c "<CMAKE DIRECTORY>" -t <report rpt_type - json, csv> -l
 static int parse_command_line(int argc, char* argv[], BINARY_INFO* bin_info)
 {
     int result = 0;
@@ -250,6 +250,7 @@ int main(int argc, char* argv[])
     BINARY_INFO bin_info;
     REPORT_HANDLE report_handle;
     memset(&bin_info, 0, sizeof(bin_info));
+    bin_info.sdk_type = SDK_TYPE_C;
 
     if (parse_command_line(argc, argv, &bin_info) != 0)
     {
@@ -261,7 +262,7 @@ int main(int argc, char* argv[])
         (void)printf("Failure cmake directory command line option not supplied\r\n");
         result = __LINE__;
     }
-    else if ((report_handle = report_initialize(bin_info.rpt_type)) == NULL)
+    else if ((report_handle = report_initialize(bin_info.rpt_type, bin_info.sdk_type)) == NULL)
     {
         (void)printf("Failure creating report handle\r\n");
         result = __LINE__;

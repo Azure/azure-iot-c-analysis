@@ -305,7 +305,7 @@ int main(int argc, char* argv[])
         (void)printf("failed construct dev\r\n");
         result = __LINE__;
     }
-    else if ((report_handle = report_initialize(REPORTER_TYPE_JSON)) == NULL)
+    else if ((report_handle = report_initialize(REPORTER_TYPE_JSON, SDK_TYPE_C)) == NULL)
     {
         (void)printf("Failure creating report handle\r\n");
         free(conn_info.device_conn_string);

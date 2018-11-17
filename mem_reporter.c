@@ -36,12 +36,12 @@ static REPORTER_TYPE g_report_type = REPORTER_TYPE_JSON;
 static const char* const UNKNOWN_TYPE = "unknown";
 static const char* const NODE_SDK_ANALYSIS = "sdkAnalysis";
 static const char* const NODE_BASE_ARRAY = "analysisItem";
-static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"sdkAnalysis\" : { \"osType\": \"%s\", \"version\": \"1.0.0\", \"uploadEnabled\": \"%s\", \"logEnabled\": \"%s\", \"analysisItem\" : [] } }";
+static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"sdkAnalysis\" : { \"osType\": \"%s\", \"sdkType\": \"%s\", \"version\": \"1.0.0\", \"uploadEnabled\": \"%s\", \"logEnabled\": \"%s\", \"analysisItem\" : [] } }";
 static const char* const NODE_OPERATING_SYSTEM = "osType";
 
-static const char* const BINARY_SIZE_JSON_FMT = "{ \"type\": \"ROM\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"binarySize\" : \"%s\" }";
-static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"type\": \"RAM\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgCount\" : %d, \"maxMemory\" : \"%s\", \"currMemory\" : \"%s\", \"numAlloc\" : \"%s\" } }";
-static const char* const NETWORK_ANALYSIS_JSON_FMT = "{ \"type\": \"NETWORK\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgPayload\" : %d, \"bytesSent\" : \"%s\", \"numSends\" : \"%s\", \"recvBytes\" : \"%s\", \"numRecv\" : \"%s\" } }";
+static const char* const BINARY_SIZE_JSON_FMT = "{ \"rpt_type\": \"ROM\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"binarySize\" : \"%s\" }";
+static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"rpt_type\": \"RAM\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgCount\" : %d, \"maxMemory\" : \"%s\", \"currMemory\" : \"%s\", \"numAlloc\" : \"%s\" } }";
+static const char* const NETWORK_ANALYSIS_JSON_FMT = "{ \"rpt_type\": \"NETWORK\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgPayload\" : %d, \"bytesSent\" : \"%s\", \"numSends\" : \"%s\", \"recvBytes\" : \"%s\", \"numRecv\" : \"%s\" } }";
 
 static const char* const BINARY_SIZE_CSV_FMT = "%s, %s, %s, %s, %s, %s";
 static const char* const HEAP_ANALYSIS_CSV_FMT = "%s, %s, %s, %s, %s, %s, %s, %d, %zu, %zu, %zu";
@@ -71,7 +71,8 @@ typedef struct CSV_REPORT_INFO_TAG
 
 typedef struct REPORT_INFO_TAG
 {
-    REPORTER_TYPE type;
+    SDK_TYPE sdk_type;
+    REPORTER_TYPE rpt_type;
     union
     {
         JSON_REPORT_INFO json_info;
@@ -229,13 +230,13 @@ static bool upload_to_azure(const char* connection_string, const char* data)
     return result;
 }
 
-static int write_to_storage(const char* report_data, const char* output_file, REPORTER_TYPE type)
+static int write_to_storage(const char* report_data, const char* output_file, REPORTER_TYPE rpt_type)
 {
     int result;
     if (output_file != NULL)
     {
         const char* filemode = "a";
-        if (type == REPORTER_TYPE_JSON)
+        if (rpt_type == REPORTER_TYPE_JSON)
         {
             filemode = "w";
         }
@@ -288,10 +289,10 @@ static const char* get_protocol_name(PROTOCOL_TYPE protocol)
     return result;
 }
 
-static const char* get_layer_type(FEATURE_TYPE type)
+static const char* get_layer_type(FEATURE_TYPE rpt_type)
 {
     const char* result;
-    switch (type)
+    switch (rpt_type)
     {
         case FEATURE_TELEMETRY_LL:
         case FEATURE_C2D_LL:
@@ -315,10 +316,10 @@ static const char* get_layer_type(FEATURE_TYPE type)
     return result;
 }
 
-static const char* get_feature_type(FEATURE_TYPE type)
+static const char* get_feature_type(FEATURE_TYPE rpt_type)
 {
     const char* result;
-    switch (type)
+    switch (rpt_type)
     {
     case FEATURE_TELEMETRY_LL:
     case FEATURE_TELEMETRY_UL:
@@ -347,10 +348,34 @@ static const char* get_feature_type(FEATURE_TYPE type)
     return result;
 }
 
-static const char* get_operation_type(OPERATION_TYPE type)
+static const char* get_sdk_type(SDK_TYPE sdk_type)
 {
     const char* result;
-    switch (type)
+    switch (sdk_type)
+    {
+        case SDK_TYPE_C:
+            result = "iot-sdk-c";
+            break;
+        case SDK_TYPE_CSHARP:
+            result = "iot-sdk-csharp";
+            break;
+        case SDK_TYPE_JAVA:
+            result = "iot-sdk-java";
+            break;
+        case SDK_TYPE_NODE:
+            result = "iot-sdk-node";
+            break;
+        default:
+            result = UNKNOWN_TYPE;
+            break;
+    }
+    return result;
+}
+
+static const char* get_operation_type(OPERATION_TYPE rpt_type)
+{
+    const char* result;
+    switch (rpt_type)
     {
         case OPERATION_MEMORY:
             result = "memory";
@@ -368,13 +393,13 @@ static const char* get_operation_type(OPERATION_TYPE type)
     return result;
 }
 
-static const char* get_format_value(const REPORT_INFO* report_info, OPERATION_TYPE type)
+static const char* get_format_value(const REPORT_INFO* report_info, OPERATION_TYPE rpt_type)
 {
     const char* result;
-    switch (type)
+    switch (rpt_type)
     {
         case OPERATION_MEMORY:
-            if (report_info->type == REPORTER_TYPE_CSV)
+            if (report_info->rpt_type == REPORTER_TYPE_CSV)
             {
                 result = HEAP_ANALYSIS_CSV_FMT;
             }
@@ -384,7 +409,7 @@ static const char* get_format_value(const REPORT_INFO* report_info, OPERATION_TY
             }
             break;
         case OPERATION_NETWORK:
-            if (report_info->type == REPORTER_TYPE_CSV)
+            if (report_info->rpt_type == REPORTER_TYPE_CSV)
             {
                 result = NETWORK_ANALYSIS_CSV_FMT;
             }
@@ -394,7 +419,7 @@ static const char* get_format_value(const REPORT_INFO* report_info, OPERATION_TY
             }
             break;
         case OPERATION_BINARY_SIZE:
-            if (report_info->type == REPORTER_TYPE_CSV)
+            if (report_info->rpt_type == REPORTER_TYPE_CSV)
             {
                 result = BINARY_SIZE_CSV_FMT;
             }
@@ -410,7 +435,7 @@ static const char* get_format_value(const REPORT_INFO* report_info, OPERATION_TY
     return result;
 }
 
-REPORT_HANDLE report_initialize(REPORTER_TYPE type)
+REPORT_HANDLE report_initialize(REPORTER_TYPE rpt_type, SDK_TYPE sdk_type)
 {
     REPORT_INFO* result;
     if ((result = (REPORT_INFO*)malloc(sizeof(REPORT_INFO))) == NULL)
@@ -421,10 +446,11 @@ REPORT_HANDLE report_initialize(REPORTER_TYPE type)
     else
     {
         //JSON_Object* json_object;
-        result->type = type;
-        if (result->type == REPORTER_TYPE_JSON)
+        result->rpt_type = rpt_type;
+        result->sdk_type = sdk_type;
+        if (result->rpt_type == REPORTER_TYPE_JSON)
         {
-            STRING_HANDLE json_node = STRING_construct_sprintf(SDK_ANALYSIS_EMPTY_NODE, OS_NAME, UPLOAD_INCLUDED, LOGGING_INCLUDED);
+            STRING_HANDLE json_node = STRING_construct_sprintf(SDK_ANALYSIS_EMPTY_NODE, OS_NAME, get_sdk_type(result->sdk_type), UPLOAD_INCLUDED, LOGGING_INCLUDED);
             if (json_node == NULL)
             {
                 (void)printf("Failure creating Analysis node\r\n");
@@ -454,7 +480,7 @@ REPORT_HANDLE report_initialize(REPORTER_TYPE type)
             }
             STRING_delete(json_node);
         }
-        else if (result->type == REPORTER_TYPE_CSV)
+        else if (result->rpt_type == REPORTER_TYPE_CSV)
         {
             if ((result->rpt_value.csv_info.csv_list = STRING_new()) == NULL)
             {
@@ -478,11 +504,11 @@ void report_deinitialize(REPORT_HANDLE handle)
     // Close the file
     if (handle != NULL)
     {
-        if (handle->type == REPORTER_TYPE_JSON)
+        if (handle->rpt_type == REPORTER_TYPE_JSON)
         {
             json_value_free(handle->rpt_value.json_info.root_value);
         }
-        else if (handle->type == REPORTER_TYPE_CSV)
+        else if (handle->rpt_type == REPORTER_TYPE_CSV)
         {
             STRING_delete(handle->rpt_value.csv_info.csv_list);
         }
@@ -588,7 +614,7 @@ bool report_write(REPORT_HANDLE handle, const char* output_file, const char* con
     }
     else
     {
-        if (handle->type == REPORTER_TYPE_JSON)
+        if (handle->rpt_type == REPORTER_TYPE_JSON)
         {
             char* report_data = json_serialize_to_string_pretty(handle->rpt_value.json_info.root_value);
             if (report_data == NULL)
@@ -601,7 +627,7 @@ bool report_write(REPORT_HANDLE handle, const char* output_file, const char* con
                 // Write to a file or print out string
                 if (output_file != NULL)
                 {
-                    write_to_storage(report_data, output_file, handle->type);
+                    write_to_storage(report_data, output_file, handle->rpt_type);
                 }
                 else
                 {
@@ -620,7 +646,7 @@ bool report_write(REPORT_HANDLE handle, const char* output_file, const char* con
             const char* report_data = STRING_c_str(handle->rpt_value.csv_info.csv_list);
             if (output_file != NULL)
             {
-                write_to_storage(report_data, output_file, handle->type);
+                write_to_storage(report_data, output_file, handle->rpt_type);
             }
             if (conn_string != NULL)
             {

@@ -62,6 +62,7 @@ set(SDK_CERT_INCLUDE_DIRS
 )
 set(REPORTER_DIR ${CMAKE_CURRENT_LIST_DIR})
 
+add_analytic_directory(app_analysis "app_analysis")
 add_analytic_directory(binary_info "binary_info")
 add_subdirectory(network)
 add_subdirectory(memory)

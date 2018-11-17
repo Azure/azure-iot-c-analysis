@@ -64,6 +64,14 @@ typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
         REPORTER_TYPE_MD
     } REPORTER_TYPE;
 
+    typedef enum SDK_TYPE_TAG
+    {
+        SDK_TYPE_C,
+        SDK_TYPE_CSHARP,
+        SDK_TYPE_JAVA,
+        SDK_TYPE_NODE
+    } SDK_TYPE;
+
     typedef struct CONNECTION_INFO_TAG
     {
         char* device_conn_string;
@@ -91,9 +99,10 @@ typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
         const char* output_file;
         const char* azure_conn_string;
         bool skip_ul;
+        SDK_TYPE sdk_type;
     } BINARY_INFO;
 
-    extern REPORT_HANDLE report_initialize(REPORTER_TYPE type);
+    extern REPORT_HANDLE report_initialize(REPORTER_TYPE rpt_type, SDK_TYPE sdk_type);
     extern void report_deinitialize(REPORT_HANDLE handle);
     
     extern void report_memory_usage(REPORT_HANDLE handle, const MEM_ANALYSIS_INFO* iot_mem_info);
