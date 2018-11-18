@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "process_handler.h"
+#include "binary_handler.h"
+
+#include "azure_c_shared_utility/threadapi.h"
 
 #define TOLOWER(c) (((c>='A') && (c<='Z'))?c-'A'+'a':c)
 
@@ -23,6 +26,14 @@ typedef struct ANALYSIS_INFO_TAG
     const char* azure_conn_string;
     const char* process_arguments;
 } ANALYSIS_INFO;
+
+typedef struct EXEC_INFO_TAG
+{
+    SDK_TYPE sdk_type;
+    uint32_t bin_size;
+    uint32_t memory_max;
+    uint16_t thread_cnt;
+} EXEC_INFO;
 
 static void print_help(void)
 {
@@ -117,8 +128,13 @@ int main(int argc, char* argv[])
     }
     else
     {
+        EXEC_INFO exec_info;
+        exec_info.sdk_type = SDK_TYPE_C;
+
+        exec_info.bin_size = binary_handler_get_size(analysis_info.process_filename, exec_info.sdk_type);
+
         // Create the process
-        PROCESS_HANDLER_HANDLE proc_handle = process_handler_create(analysis_info.process_filename);
+        PROCESS_HANDLER_HANDLE proc_handle = process_handler_create(analysis_info.process_filename, NULL, NULL);
         if (proc_handle == NULL)
         {
             (void)printf("Failure creating process handler\r\n");
@@ -126,6 +142,21 @@ int main(int argc, char* argv[])
         }
         else
         {
+            if (process_handler_start(proc_handle, analysis_info.process_arguments) != 0)
+            {
+                (void)printf("Failure starting process handler\r\n");
+                result = __LINE__;
+            }
+            else
+            {
+                do
+                {
+                    uint32_t mem = process_handler_get_memory_used(proc_handle);
+                    (void)printf("mem: %d\r\n", mem);
+                } while (process_handler_is_active(proc_handle));
+
+                process_handler_end(proc_handle);
+            }
             process_handler_destroy(proc_handle);
         }
     }

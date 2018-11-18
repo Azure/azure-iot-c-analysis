@@ -8,16 +8,14 @@
 
 int main(int argc, char* argv[])
 {
-    int result;
-
     (void)printf("Starting the work loop\r\n");
-    for (size_t index; index < LOOP_COUNT; index++)
+    for (size_t index = 0; index < LOOP_COUNT; index++)
     {
         if (index == LOOP_COUNT/2)
         {
             (void)printf("Half way complete\r\n");
         }
-        ThreadAPI_Sleep(500);
+        ThreadAPI_Sleep(50);
     }
     (void)printf("Finished work\r\n");
     return 0;

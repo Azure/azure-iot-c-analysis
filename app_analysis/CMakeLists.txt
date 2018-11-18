@@ -1,12 +1,14 @@
 #Copyright (c) Microsoft. All rights reserved.
 #Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-set(app_analysis_c_files
-    src/main.c
+set(app_analysis_h_files
+    inc/binary_handler.h
+    inc/process_handler.h
 )
 
-set(app_analysis_h_files
-    inc/process_handler.h
+set(app_analysis_c_files
+    src/binary_handler.c
+    src/main.c
 )
 
 if(WIN32)
