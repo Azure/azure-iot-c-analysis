@@ -3,7 +3,10 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#define _GNU_SOURCE
 #include <unistd.h>
+#include <signal.h>
+#include <sys/types.h>
 #include "process_handler.h"
 
 #include "azure_c_shared_utility/crt_abstractions.h"
@@ -44,6 +47,41 @@ static int get_process_id(const char* process_name)
             result = atoi(pid);
         }
         pclose(fp);
+    }
+    return result;
+}
+
+static int get_process_stat(PROCESS_HANDLER_HANDLE handle)
+{
+    int result;
+    char proc_file[128];
+    sprintf(proc_file, "/proc/%d/stat", handle->proc_id);
+
+    FILE* stat_info = fopen(proc_file, "r");
+    if (stat_info == NULL)
+    {
+        result = __LINE__;
+    }
+    else
+    {
+        int pid;
+        char filename[128];
+        char state;
+        int parent_pid, proc_grpid, session_id, tty_nr, tpgid;
+        unsigned int flags;
+        unsigned long min_faults, num_min_ft, maj_faults, num_maj_ft, utime, sched_time, virt_mem_size;
+        long cu_time, cs_time, dummy, num_treads;
+        unsigned long long start_time;
+
+        //                                            10  11  12  13  14  15  16
+        fscanf(stat_info, "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld %ld %ld %llu %lu", &pid, filename, &state, &parent_pid, &proc_grpid, &session_id, &tty_nr,
+        &tpgid, &flags, &min_faults, &num_min_ft, &maj_faults, &num_maj_ft, &utime, &sched_time, &cu_time, &cs_time, &dummy, &dummy, &num_treads, &dummy, &start_time, &virt_mem_size);
+        //               10           11            12         13           14       15           16
+
+        (void)printf("Threads: %lu Vm Size %lu", num_treads, virt_mem_size);
+
+        fclose(stat_info);
+        result = 0;
     }
     return result;
 }
@@ -105,7 +143,7 @@ int process_handler_start(PROCESS_HANDLER_HANDLE handle, const char* cmdline_arg
         }
         else if (pid == 0)
         {
-            exec(handle->process_filename, cmdline_args);
+            execl(handle->process_filename, cmdline_args, (char*)NULL);
             exit(0);
         }
         else
@@ -135,6 +173,12 @@ int process_handler_end(PROCESS_HANDLER_HANDLE handle)
     }
     else
     {
+        if (get_process_id(handle->process_filename) == handle->proc_id)
+        {
+            kill(handle->proc_id, SIGTERM);
+            sleep(2);
+            kill(handle->proc_id, SIGKILL);
+        }
         result = 0;
     }
     return result;
@@ -159,11 +203,18 @@ uint32_t process_handler_get_memory_used(PROCESS_HANDLER_HANDLE handle)
     uint32_t result;
     if (handle == NULL)
     {
-        result = __LINE__;
+        result = 0;
     }
     else
     {
-        result = 0;
+        if (get_process_stat(handle) == 0)
+        {
+            result = 0;
+        }
+        else
+        {
+            result = 0;
+        }
     }
     return result;
 }
@@ -173,7 +224,7 @@ uint32_t process_handler_get_threads(PROCESS_HANDLER_HANDLE handle)
     uint32_t result;
     if (handle == NULL)
     {
-        result = __LINE__;
+        result = 0;
     }
     else
     {
