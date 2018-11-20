@@ -156,6 +156,7 @@ int main(int argc, char* argv[])
                 } while (process_handler_is_active(proc_handle));
 
                 process_handler_end(proc_handle);
+                result = 0;
             }
             process_handler_destroy(proc_handle);
         }
