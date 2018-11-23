@@ -14,6 +14,12 @@ extern "C" {
 #include <stdint.h>
 #endif
 
+typedef struct PROCESS_INFO_TAG
+{
+    uint32_t num_threads;
+    uint32_t memory_size;
+} PROCESS_INFO;
+
 typedef struct PROCESS_HANDLER_INFO_TAG* PROCESS_HANDLER_HANDLE;
 
 typedef void(*PROCESS_END_CB)(void* user_cb);
@@ -27,6 +33,7 @@ extern int process_handler_start(PROCESS_HANDLER_HANDLE handle, const char* cmdl
 extern int process_handler_end(PROCESS_HANDLER_HANDLE handle);
 
 extern bool process_handler_is_active(PROCESS_HANDLER_HANDLE handle);
+extern int process_handler_get_process_info(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO* proc_info);
 
 //extern uint32_t process_handler_get_bin_size(PROCESS_HANDLER_HANDLE handle);
 extern uint32_t process_handler_get_memory_used(PROCESS_HANDLER_HANDLE handle);

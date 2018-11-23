@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "azure_c_shared_utility/threadapi.h"
 
-#define LOOP_COUNT      1000000
+#define LOOP_COUNT      10000
 
 int main(int argc, char* argv[])
 {

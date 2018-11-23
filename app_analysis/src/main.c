@@ -7,8 +7,11 @@
 #include "binary_handler.h"
 
 #include "azure_c_shared_utility/threadapi.h"
+#include "azure_c_shared_utility/tickcounter.h"
 
 #define TOLOWER(c) (((c>='A') && (c<='Z'))?c-'A'+'a':c)
+
+#define PROCESS_MEMORY_READ_TIME_SEC    1
 
 typedef enum ARGUEMENT_TYPE_TAG
 {
@@ -114,6 +117,7 @@ int main(int argc, char* argv[])
 {
     int result;
     ANALYSIS_INFO analysis_info;
+    TICK_COUNTER_HANDLE tickcounter_handle;
 
     if (parse_command_line(argc, argv, &analysis_info) != 0)
     {
@@ -124,6 +128,11 @@ int main(int argc, char* argv[])
     else if (validate_args(&analysis_info) != 0)
     {
         (void)printf("Failure parsing command line\r\n");
+        result = __LINE__;
+    }
+    else if ((tickcounter_handle = tickcounter_create()) == NULL)
+    {
+        (void)printf("Failure creating tick counter\r\n");
         result = __LINE__;
     }
     else
@@ -142,6 +151,10 @@ int main(int argc, char* argv[])
         }
         else
         {
+            tickcounter_ms_t last_poll_time = 0;
+            tickcounter_ms_t current_time = 0;
+            tickcounter_get_current_ms(tickcounter_handle, &last_poll_time);
+
             if (process_handler_start(proc_handle, analysis_info.process_arguments) != 0)
             {
                 (void)printf("Failure starting process handler\r\n");
@@ -149,10 +162,17 @@ int main(int argc, char* argv[])
             }
             else
             {
+                PROCESS_INFO proc_info;
                 do
                 {
-                    uint32_t mem = process_handler_get_memory_used(proc_handle);
-                    (void)printf("mem: %d\r\n", mem);
+                    tickcounter_get_current_ms(tickcounter_handle, &current_time);
+                    if ((current_time - last_poll_time) / 1000 > PROCESS_MEMORY_READ_TIME_SEC)
+                    {
+                        last_poll_time = current_time;
+                        uint32_t mem = process_handler_get_process_info(proc_handle, &proc_info);
+                        (void)printf("mem: %d threads: %d\r\n", proc_info.memory_size, proc_info.num_threads);
+                    }
+                    ThreadAPI_Sleep(10);
                 } while (process_handler_is_active(proc_handle));
 
                 process_handler_end(proc_handle);
@@ -160,6 +180,10 @@ int main(int argc, char* argv[])
             }
             process_handler_destroy(proc_handle);
         }
+        tickcounter_destroy(tickcounter_handle);
     }
+
+    (void)printf("Press any key to continue:");
+    (void)getchar();
     return result;
 }

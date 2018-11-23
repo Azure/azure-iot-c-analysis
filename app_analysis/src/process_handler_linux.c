@@ -19,6 +19,10 @@ typedef struct PROCESS_HANDLER_INFO_TAG
     pid_t proc_id;
     PROCESS_END_CB process_end_cb;
     void* user_cb;
+
+    uint32_t virt_memory_size;
+    uint32_t memory_size;
+    uint32_t num_threads;
 } PROCESS_HANDLER_INFO;
 
 #define PID_LINE_LENGTH     1024
@@ -36,10 +40,8 @@ static int get_process_id(const char* process_name)
     else
     {
         char* pid;
-        fgets(pid_line, PID_LINE_LENGTH, fp);
-        if ((pid = strtok(pid_line, " ")) == NULL)
+        if ((fgets(pid_line, PID_LINE_LENGTH, fp) == NULL) || (pid = strtok(pid_line, " ")) == NULL)
         {
-
             result = 0;
         }
         else
@@ -51,7 +53,7 @@ static int get_process_id(const char* process_name)
     return result;
 }
 
-static int get_process_stat(PROCESS_HANDLER_HANDLE handle)
+static int get_process_stat(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO* proc_info)
 {
     int result;
     char proc_file[128];
@@ -73,15 +75,18 @@ static int get_process_stat(PROCESS_HANDLER_HANDLE handle)
         long cu_time, cs_time, dummy, num_treads;
         unsigned long long start_time;
 
-        //                                            10  11  12  13  14  15  16
-        fscanf(stat_info, "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld %ld %ld %llu %lu", &pid, filename, &state, &parent_pid, &proc_grpid, &session_id, &tty_nr,
-        &tpgid, &flags, &min_faults, &num_min_ft, &maj_faults, &num_maj_ft, &utime, &sched_time, &cu_time, &cs_time, &dummy, &dummy, &num_treads, &dummy, &start_time, &virt_mem_size);
-        //               10           11            12         13           14       15           16
-
-        (void)printf("Threads: %lu Vm Size %lu", num_treads, virt_mem_size);
-
+        if (fscanf(stat_info, "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld %ld %ld %llu %lu", &pid, filename, &state, &parent_pid, &proc_grpid, &session_id, &tty_nr,
+        &tpgid, &flags, &min_faults, &num_min_ft, &maj_faults, &num_maj_ft, &utime, &sched_time, &cu_time, &cs_time, &dummy, &dummy, &num_treads, &dummy, &start_time, &virt_mem_size) == 0)
+        {
+            result = __LINE__;
+        }
+        else
+        {
+            proc_info->num_threads = (uint32_t)num_treads;
+            proc_info->memory_size = (uint32_t)virt_mem_size;
+            result = 0;
+        }
         fclose(stat_info);
-        result = 0;
     }
     return result;
 }
@@ -198,7 +203,29 @@ bool process_handler_is_active(PROCESS_HANDLER_HANDLE handle)
     return result;
 }
 
-uint32_t process_handler_get_memory_used(PROCESS_HANDLER_HANDLE handle)
+int process_handler_get_process_info(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO* proc_info)
+{
+    int result;
+    if (handle == NULL || proc_info == NULL)
+    {
+        LogError("Invalid argument handle: %p proc_info: %p", handle, proc_info);
+        result = __LINE__;
+    }
+    else
+    {
+        if (get_process_stat(handle, proc_info) == 0)
+        {
+            result = 0;
+        }
+        else
+        {
+            result = handle->memory_size;
+        }
+    }
+    return result;
+}
+
+/*uint32_t process_handler_get_memory_used(PROCESS_HANDLER_HANDLE handle)
 {
     uint32_t result;
     if (handle == NULL)
@@ -213,7 +240,7 @@ uint32_t process_handler_get_memory_used(PROCESS_HANDLER_HANDLE handle)
         }
         else
         {
-            result = 0;
+            result = handle->memory_size;
         }
     }
     return result;
@@ -228,8 +255,14 @@ uint32_t process_handler_get_threads(PROCESS_HANDLER_HANDLE handle)
     }
     else
     {
-        result = 0;
+        if (get_process_stat(handle) == 0)
+        {
+            result = 0;
+        }
+        else
+        {
+            result = handle->num_threads;
+        }
     }
     return result;
-}
-
+}*/
