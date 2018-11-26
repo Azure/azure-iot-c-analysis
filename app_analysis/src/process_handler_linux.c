@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
+
 #define _GNU_SOURCE
 #include <unistd.h>
 #include <signal.h>
@@ -19,6 +21,8 @@ typedef struct PROCESS_HANDLER_INFO_TAG
     pid_t proc_id;
     PROCESS_END_CB process_end_cb;
     void* user_cb;
+
+    char process_state;
 
     uint32_t virt_memory_size;
     uint32_t memory_size;
@@ -82,6 +86,7 @@ static int get_process_stat(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO* proc_in
         }
         else
         {
+            handle->process_state = state;
             proc_info->num_threads = (uint32_t)num_treads;
             proc_info->memory_size = (uint32_t)virt_mem_size;
             result = 0;
@@ -148,8 +153,10 @@ int process_handler_start(PROCESS_HANDLER_HANDLE handle, const char* cmdline_arg
         }
         else if (pid == 0)
         {
+            int status;
             execl(handle->process_filename, cmdline_args, (char*)NULL);
-            exit(0);
+            waitpid(pid, &status, 0);
+            exit(status);
         }
         else
         {
@@ -193,6 +200,10 @@ bool process_handler_is_active(PROCESS_HANDLER_HANDLE handle)
 {
     bool result;
     if (handle == NULL)
+    {
+        result = false;
+    }
+    else if (handle->process_state != 'R')
     {
         result = false;
     }

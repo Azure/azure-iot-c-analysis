@@ -32,3 +32,5 @@ include_directories(${SHARED_UTIL_INC_FOLDER})
 
 add_executable(app_analysis ${app_analysis_c_files} ${app_analysis_h_files})
 target_link_libraries(app_analysis aziotsharedutil)
+
+compileTargetAsC99(app_analysis)
