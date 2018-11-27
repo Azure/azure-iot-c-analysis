@@ -21,6 +21,14 @@ typedef struct PROCESS_INFO_TAG
     uint32_t handle_cnt;
 } PROCESS_INFO;
 
+typedef struct NETWORK_INFO_TAG
+{
+    uint32_t bytes_recv;
+    uint32_t packets_recv;
+    uint32_t bytes_transmit;
+    uint32_t packets_transmit;
+} NETWORK_INFO;
+
 typedef struct PROCESS_HANDLER_INFO_TAG* PROCESS_HANDLER_HANDLE;
 
 typedef void(*PROCESS_END_CB)(void* user_cb);
@@ -35,9 +43,6 @@ extern int process_handler_end(PROCESS_HANDLER_HANDLE handle);
 
 extern bool process_handler_is_active(PROCESS_HANDLER_HANDLE handle);
 extern int process_handler_get_process_info(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO* proc_info);
-
-//extern uint32_t process_handler_get_bin_size(PROCESS_HANDLER_HANDLE handle);
-extern uint32_t process_handler_get_memory_used(PROCESS_HANDLER_HANDLE handle);
-extern uint32_t process_handler_get_threads(PROCESS_HANDLER_HANDLE handle);
+extern int process_handler_get_network_info(PROCESS_HANDLER_HANDLE handle, NETWORK_INFO* network_info);
 
 #endif // PROCESS_HANDLER_H

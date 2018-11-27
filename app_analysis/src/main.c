@@ -211,6 +211,12 @@ int main(int argc, char* argv[])
                             proc_info.num_threads = proc_info.num_threads > proc_info_min.num_threads ? proc_info.num_threads : proc_info_min.num_threads;
                             proc_info.memory_size = proc_info.memory_size > proc_info_min.memory_size ? proc_info.memory_size : proc_info_min.memory_size;
                         }
+
+                        NETWORK_INFO network_info;
+                        if (process_handler_get_network_info(proc_handle, &network_info) == 0)
+                        {
+
+                        }
                     }
                     ThreadAPI_Sleep(10);
                 } while (process_handler_is_active(proc_handle));

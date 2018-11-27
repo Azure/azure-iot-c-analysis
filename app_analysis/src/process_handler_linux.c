@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include "process_handler.h"
 
 #include "azure_c_shared_utility/crt_abstractions.h"
@@ -57,6 +58,7 @@ static int get_process_id(const char* process_name)
     return result;
 }
 
+// http://man7.org/linux/man-pages/man5/proc.5.html
 static int get_process_stat(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO* proc_info)
 {
     int result;
@@ -235,6 +237,22 @@ int process_handler_get_process_info(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO
     }
     return result;
 }
+
+int process_handler_get_network_info(PROCESS_HANDLER_HANDLE handle, NETWORK_INFO* network_info)
+{
+    int result;
+    if (handle == NULL || network_info == NULL)
+    {
+        LogError("Invalid argument handle: %p network_info: %p", handle, network_info);
+        result = __LINE__;
+    }
+    else
+    {
+        result = 0;
+    }
+    return result;
+}
+
 
 /*uint32_t process_handler_get_memory_used(PROCESS_HANDLER_HANDLE handle)
 {
