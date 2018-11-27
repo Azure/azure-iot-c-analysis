@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "azure_c_shared_utility/threadapi.h"
 
-#define LOOP_COUNT      10000
+#define LOOP_COUNT      20
 
 int main(int argc, char* argv[])
 {
@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
         {
             (void)printf("Half way complete\r\n");
         }
-        ThreadAPI_Sleep(50);
+        ThreadAPI_Sleep(1000);
     }
     (void)printf("Finished work\r\n");
     return 0;

@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <Windows.h>
 #include <psapi.h>
+#include <tlhelp32.h>
 
 #include "process_handler.h"
 
@@ -18,6 +19,76 @@ typedef struct PROCESS_HANDLER_INFO_TAG
     PROCESS_END_CB process_end_cb;
     void* user_cb;
 } PROCESS_HANDLER_INFO;
+
+static int get_process_stat(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO* proc_info)
+{
+    int result;
+
+    APP_MEMORY_INFORMATION app_mem_info;
+    if (GetProcessInformation(handle->proc_info.hProcess, ProcessAppMemoryInfo, &app_mem_info, sizeof(app_mem_info)))
+    {
+        proc_info->memory_size = (uint32_t)app_mem_info.TotalCommitUsage;
+    }
+
+    DWORD handle_cnt;
+    if (GetProcessHandleCount(handle->proc_info.hProcess, &handle_cnt))
+    {
+        proc_info->handle_cnt = handle_cnt;
+    }
+
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPALL, handle->proc_info.dwProcessId);
+    if (snapshot == NULL)
+    {
+        LogError("Failed creating snapshot of system");
+        result = __LINE__;
+    }
+    else
+    {
+        // Get the thread information
+        PROCESSENTRY32 proc_entry;
+        proc_entry.dwSize = sizeof(PROCESSENTRY32);
+        if (!Process32First(snapshot, &proc_entry))
+        {
+            LogError("Failed retrieving snapshot");
+            result = __LINE__;
+        }
+        else
+        {
+            do
+            {
+                if (proc_entry.th32ProcessID == handle->proc_info.dwProcessId)
+                {
+                    proc_info->num_threads = proc_entry.cntThreads;
+                }
+            } while (Process32Next(snapshot, &proc_entry));
+            result = 0;
+        }
+        CloseHandle(snapshot);
+
+
+        /*PROCESS_MEMORY_COUNTERS_EX pmc;
+        pmc.cb = sizeof(PROCESS_MEMORY_COUNTERS_EX);
+        if (!GetProcessMemoryInfo(handle->proc_info.hProcess, (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc)))
+        {
+            LogError("Failed retrieving memory info from process %d", GetLastError());
+            result = __LINE__;
+        }
+        else
+        {
+            /*printf("\tPageFaultCount: %d\n", pmc.PageFaultCount);
+            printf("\tPeakWorkingSetSize: %d\n", pmc.PeakWorkingSetSize);
+            printf("\tWorkingSetSize: %d\n", pmc.WorkingSetSize);
+            printf("\tQuotaPeakPagedPoolUsage: %d\n", pmc.QuotaPeakPagedPoolUsage);
+            printf("\tQuotaPagedPoolUsage: %d\n", pmc.QuotaPagedPoolUsage);
+            printf("\tQuotaPeakNonPagedPoolUsage: %d\n", pmc.QuotaPeakNonPagedPoolUsage);
+            printf("\tQuotaNonPagedPoolUsage: %d\n", pmc.QuotaNonPagedPoolUsage);
+            printf("\tPagefileUsage: %d\n", pmc.PagefileUsage);
+            printf("\tPeakPagefileUsage: %d\n", pmc.PeakPagefileUsage);*/
+            /*proc_info->memory_size = pmc.WorkingSetSize;
+        }*/
+    }
+    return result;
+}
 
 PROCESS_HANDLER_HANDLE process_handler_create(const char* process_path, PROCESS_END_CB process_end_cb, void* user_cb)
 {
@@ -100,6 +171,8 @@ int process_handler_start(PROCESS_HANDLER_HANDLE handle, const char* cmdline_arg
         }
         else
         {
+            printf("Is active %s", process_handler_is_active(handle) ? "true" : "false");
+
             result = 0;
         }
     }
@@ -137,12 +210,34 @@ extern bool process_handler_is_active(PROCESS_HANDLER_HANDLE handle)
     }
     else
     {
-        result = (WaitForSingleObject(handle->proc_info.hProcess, 0) == WAIT_OBJECT_0);
+        result = (WaitForSingleObject(handle->proc_info.hProcess, 0) != WAIT_OBJECT_0);
     }
     return result;
 }
 
-uint32_t process_handler_get_memory_used(PROCESS_HANDLER_HANDLE handle)
+int process_handler_get_process_info(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO* proc_info)
+{
+    int result;
+    if (handle == NULL || proc_info == NULL)
+    {
+        LogError("Invalid argument handle: %p proc_info: %p", handle, proc_info);
+        result = __LINE__;
+    }
+    else
+    {
+        if (get_process_stat(handle, proc_info) == 0)
+        {
+            result = 0;
+        }
+        else
+        {
+            result = 0;
+        }
+    }
+    return result;
+}
+
+/*uint32_t process_handler_get_memory_used(PROCESS_HANDLER_HANDLE handle)
 {
     uint32_t result;
     if (handle == NULL || handle->proc_info.hProcess == NULL)
@@ -186,5 +281,5 @@ uint32_t process_handler_get_threads(PROCESS_HANDLER_HANDLE handle)
         result = 0;
     }
     return result;
-}
+}*/
 

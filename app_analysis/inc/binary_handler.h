@@ -11,14 +11,7 @@ extern "C" {
 #include <stdint.h>
 #endif
 
-typedef enum SDK_TYPE_TAG
-{
-    SDK_TYPE_C,
-    SDK_TYPE_CSHARP,
-    SDK_TYPE_NODE,
-    SDK_TYPE_JAVA,
-    SDK_TYPE_PYTHON
-} SDK_TYPE;
+#include "mem_reporter.h"
 
 extern uint32_t binary_handler_get_size(const char* file_path, SDK_TYPE type);
 

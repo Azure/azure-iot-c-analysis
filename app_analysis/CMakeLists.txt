@@ -4,11 +4,15 @@
 set(app_analysis_h_files
     inc/binary_handler.h
     inc/process_handler.h
+    ../mem_reporter.h
+    ../deps/parson/parson.c
 )
 
 set(app_analysis_c_files
     src/binary_handler.c
     src/main.c
+    ../mem_reporter.c
+    ../deps/parson/parson.c
 )
 
 if(WIN32)
@@ -25,8 +29,8 @@ else()
     )
 endif(WIN32)
 
-include_directories(${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_LIST_DIR}/inc)
-include_directories(${SHARED_UTIL_INC_FOLDER})
+include_directories(${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_LIST_DIR}/inc ..)
+include_directories(${SHARED_UTIL_INC_FOLDER} ../deps/parson)
 
 #set(BINARY_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR})
 

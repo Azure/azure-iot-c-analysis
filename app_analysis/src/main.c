@@ -1,10 +1,14 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+#ifdef WIN32
+#include <vld.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include "process_handler.h"
 #include "binary_handler.h"
+#include "mem_reporter.h"
 
 #include "azure_c_shared_utility/threadapi.h"
 #include "azure_c_shared_utility/tickcounter.h"
@@ -113,6 +117,25 @@ static int validate_args(ANALYSIS_INFO* anaylsis_info)
     return result;
 }
 
+static int report_data(SDK_TYPE sdk_type)
+{
+    int result;
+
+    REPORT_HANDLE rpt_handle = report_initialize(REPORTER_TYPE_JSON, sdk_type);
+    if (rpt_handle == NULL)
+    {
+        result = __LINE__;
+    }
+    else
+    {
+        //report_memory_usage(rpt_handle, const MEM_ANALYSIS_INFO* iot_mem_info);
+        report_deinitialize(rpt_handle);
+        result = 0;
+    }
+
+    return result;
+}
+
 int main(int argc, char* argv[])
 {
     int result;
@@ -162,19 +185,35 @@ int main(int argc, char* argv[])
             }
             else
             {
-                PROCESS_INFO proc_info;
+                PROCESS_INFO proc_info_min = { 0 };
+                PROCESS_INFO proc_info_max = { 0 };
+                PROCESS_INFO proc_info_avg = { 0 };
+                size_t iteration = 0;
                 do
                 {
                     tickcounter_get_current_ms(tickcounter_handle, &current_time);
                     if ((current_time - last_poll_time) / 1000 > PROCESS_MEMORY_READ_TIME_SEC)
                     {
+                        PROCESS_INFO proc_info;
                         last_poll_time = current_time;
-                        uint32_t mem = process_handler_get_process_info(proc_handle, &proc_info);
-                        (void)printf("mem: %d threads: %d\r\n", proc_info.memory_size, proc_info.num_threads);
+                        iteration++;
+                        if (process_handler_get_process_info(proc_handle, &proc_info) == 0)
+                        {
+                            (void)printf("mem: %d threads: %d, handle: %d\r\n", proc_info.memory_size, proc_info.num_threads, proc_info.handle_cnt);
+
+                            // Calculate the min values
+                            proc_info.handle_cnt = proc_info.handle_cnt < proc_info_min.handle_cnt ? proc_info.handle_cnt : proc_info_min.handle_cnt;
+                            proc_info.num_threads = proc_info.num_threads < proc_info_min.num_threads ? proc_info.num_threads : proc_info_min.num_threads;
+                            proc_info.memory_size = proc_info.memory_size < proc_info_min.memory_size ? proc_info.memory_size : proc_info_min.memory_size;
+
+                            // Calculate max values
+                            proc_info.handle_cnt = proc_info.handle_cnt > proc_info_min.handle_cnt ? proc_info.handle_cnt : proc_info_min.handle_cnt;
+                            proc_info.num_threads = proc_info.num_threads > proc_info_min.num_threads ? proc_info.num_threads : proc_info_min.num_threads;
+                            proc_info.memory_size = proc_info.memory_size > proc_info_min.memory_size ? proc_info.memory_size : proc_info_min.memory_size;
+                        }
                     }
                     ThreadAPI_Sleep(10);
                 } while (process_handler_is_active(proc_handle));
-
                 process_handler_end(proc_handle);
                 result = 0;
             }

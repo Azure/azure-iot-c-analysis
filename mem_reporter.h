@@ -81,6 +81,7 @@ typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
     typedef struct MEM_ANALYSIS_INFO_TAG
     {
         const char* iothub_version;
+        const char* analysis_name;
         PROTOCOL_TYPE iothub_protocol;
         OPERATION_TYPE operation_type;
         FEATURE_TYPE feature_type;

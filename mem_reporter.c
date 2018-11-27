@@ -14,10 +14,10 @@
 
 #include "parson.h"
 
-#include "iothub.h"
+/*#include "iothub.h"
 #include "iothub_device_client.h"
 #include "iothub_message.h"
-#include "iothubtransportmqtt.h"
+#include "iothubtransportmqtt.h"*/
 
 #define USE_MSG_BYTE_ARRAY  1
 #define MESSAGES_TO_USE     1
@@ -173,7 +173,7 @@ static void add_node_to_json(const char* node_data, const REPORT_INFO* report_in
     }
 }
 
-static void send_confirm_callback(IOTHUB_CLIENT_CONFIRMATION_RESULT result, void* userContextCallback)
+/*static void send_confirm_callback(IOTHUB_CLIENT_CONFIRMATION_RESULT result, void* userContextCallback)
 {
     int* msg_delievered = (int*)userContextCallback;
     if (msg_delievered != NULL)
@@ -228,7 +228,7 @@ static bool upload_to_azure(const char* connection_string, const char* data)
         (void)printf("Failed to uploaded data to Azure IoTHub\r\n");
     }
     return result;
-}
+}*/
 
 static int write_to_storage(const char* report_data, const char* output_file, REPORTER_TYPE rpt_type)
 {
@@ -636,7 +636,7 @@ bool report_write(REPORT_HANDLE handle, const char* output_file, const char* con
 
                 if (conn_string != NULL)
                 {
-                    upload_to_azure(conn_string, report_data);
+                    //upload_to_azure(conn_string, report_data);
                 }
                 json_free_serialized_string(report_data);
             }
@@ -650,7 +650,7 @@ bool report_write(REPORT_HANDLE handle, const char* output_file, const char* con
             }
             if (conn_string != NULL)
             {
-                upload_to_azure(conn_string, report_data);
+                //upload_to_azure(conn_string, report_data);
             }
         }
         result = true;

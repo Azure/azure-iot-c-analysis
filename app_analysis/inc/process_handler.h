@@ -18,6 +18,7 @@ typedef struct PROCESS_INFO_TAG
 {
     uint32_t num_threads;
     uint32_t memory_size;
+    uint32_t handle_cnt;
 } PROCESS_INFO;
 
 typedef struct PROCESS_HANDLER_INFO_TAG* PROCESS_HANDLER_HANDLE;
