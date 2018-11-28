@@ -98,6 +98,24 @@ static int get_process_stat(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO* proc_in
     return result;
 }
 
+static int get_network_stat(PROCESS_HANDLER_HANDLE handle, NETWORK_INFO* network_info)
+{
+    int result;
+    char proc_file[128];
+    sprintf(proc_file, "/proc/%d/net/dev", handle->proc_id);
+
+    FILE* stat_info = fopen(proc_file, "r");
+    if (stat_info == NULL)
+    {
+        result = __LINE__;
+    }
+    else
+    {
+        result = 0;
+    }
+    return result;
+}
+
 PROCESS_HANDLER_HANDLE process_handler_create(const char* process_path, PROCESS_END_CB process_end_cb, void* user_cb)
 {
     PROCESS_HANDLER_INFO* result;
@@ -251,7 +269,7 @@ int process_handler_get_network_info(PROCESS_HANDLER_HANDLE handle, NETWORK_INFO
         result = 0;
     }
     return result;
-}
+} 
 
 
 /*uint32_t process_handler_get_memory_used(PROCESS_HANDLER_HANDLE handle)
