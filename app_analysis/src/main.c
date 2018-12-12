@@ -15,7 +15,7 @@
 
 #define TOLOWER(c) (((c>='A') && (c<='Z'))?c-'A'+'a':c)
 
-#define PROCESS_MEMORY_READ_TIME_SEC    1
+#define DEFAULT_PROCESS_MEMORY_READ_TIME_SEC    1000
 
 typedef enum ARGUEMENT_TYPE_TAG
 {
@@ -32,19 +32,44 @@ typedef struct ANALYSIS_INFO_TAG
     const char* output_filename;
     const char* azure_conn_string;
     const char* process_arguments;
+    SDK_TYPE target_sdk;
 } ANALYSIS_INFO;
 
 typedef struct EXEC_INFO_TAG
 {
-    SDK_TYPE sdk_type;
     uint32_t bin_size;
     uint32_t memory_max;
     uint16_t thread_cnt;
 } EXEC_INFO;
 
+typedef struct ANALYSIS_RUN_TAG
+{
+    EXEC_INFO exec_info;
+    PROCESS_INFO proc_info_min;
+    PROCESS_INFO proc_info_max;
+    PROCESS_INFO proc_info_avg;
+    NETWORK_INFO network_info;
+} ANALYSIS_RUN;
+
+static const struct
+{
+    char short_argument;
+    const char* long_argument;
+    const char* description;
+    int mnemonic_value;
+} OPTION_ITEMS[] =
+{
+    { 'p', "process", "The full path to the process", ARGUEMENT_TYPE_PROCESS_NAME },
+    { 'd', "dev-conn", "The azure IoTHub connection string used to send test messages", ARGUEMENT_TYPE_CONN_STRING }
+};
+
 static void print_help(void)
 {
-    (void)printf("usage: app_analysis [-p <process path>] [-c <connection string>]\r\n");
+    (void)printf("usage: app_analysis [options] [sdk_type <c/c#/java/node>]\r\n");
+    for (size_t index = 0; index < sizeof(OPTION_ITEMS) / sizeof(OPTION_ITEMS[0]); index++)
+    {
+        (void)printf("   -%c --%s\t\t%s\r\n", OPTION_ITEMS[index].short_argument, OPTION_ITEMS[index].long_argument, OPTION_ITEMS[index].description);
+    }
 }
 
 // -p Process path -c "<Connection String>" -a <process arguments> -o <output file path>
@@ -59,20 +84,63 @@ static int parse_command_line(int argc, char* argv[], ANALYSIS_INFO* anaylsis_in
         {
             if (argv[index][0] == '-')
             {
-                switch (TOLOWER(argv[index][1]))
+                if (argv[index][1] == '-')
                 {
-                    case 'p':
+                    if (strcmp(argv[index], "--process") == 0)
+                    {
                         argument_type = ARGUEMENT_TYPE_PROCESS_NAME;
-                        break;
-                    case 'o':
-                        argument_type = ARGUEMENT_TYPE_OUTPUT_FILE;
-                        break;
-                    case 'a':
-                        argument_type = ARGUEMENT_TYPE_PROCESS_ARG;
-                        break;
-                    case 'c':
+                    }
+                    else if (strcmp(argv[index], "--dev-conn") == 0)
+                    {
                         argument_type = ARGUEMENT_TYPE_CONN_STRING;
-                        break;
+                    }
+                }
+                else
+                {
+                    switch (TOLOWER(argv[index][1]))
+                    {
+                        case 'p':
+                            argument_type = ARGUEMENT_TYPE_PROCESS_NAME;
+                            break;
+                        case 'o':
+                            argument_type = ARGUEMENT_TYPE_OUTPUT_FILE;
+                            break;
+                        case 'a':
+                            argument_type = ARGUEMENT_TYPE_PROCESS_ARG;
+                            break;
+                        case 'd':
+                            argument_type = ARGUEMENT_TYPE_CONN_STRING;
+                            break;
+                        case '?':
+                            break;
+                    }
+                }
+            }
+            else
+            {
+                if (strcmp(argv[index], "c") == 0)
+                {
+                    anaylsis_info->target_sdk = SDK_TYPE_C;
+                }
+                else if (strcmp(argv[index], "c#") == 0)
+                {
+                    anaylsis_info->target_sdk = SDK_TYPE_CSHARP;
+                }
+                else if (strcmp(argv[index], "java") == 0)
+                {
+                    anaylsis_info->target_sdk = SDK_TYPE_JAVA;
+                }
+                else if (strcmp(argv[index], "node") == 0)
+                {
+                    anaylsis_info->target_sdk = SDK_TYPE_NODE;
+                }
+                else
+                {
+                    if (index == argc - 1)
+                    {
+                        (void)printf("Unable to recognize sdk type\r\n");
+                        result = __LINE__;
+                    }
                 }
             }
         }
@@ -108,6 +176,12 @@ static int validate_args(ANALYSIS_INFO* anaylsis_info)
     int result;
     if (anaylsis_info->process_filename == NULL)
     {
+        (void)printf("Process filename not found\r\n");
+        result = __LINE__;
+    }
+    else if (anaylsis_info->target_sdk == SDK_TYPE_UNKNOWN)
+    {
+        (void)printf("Target SDK not found\r\n");
         result = __LINE__;
     }
     else
@@ -117,13 +191,14 @@ static int validate_args(ANALYSIS_INFO* anaylsis_info)
     return result;
 }
 
-static int report_data(SDK_TYPE sdk_type)
+static int report_data(ANALYSIS_INFO* analysis_info, ANALYSIS_RUN run_info)
 {
     int result;
 
-    REPORT_HANDLE rpt_handle = report_initialize(REPORTER_TYPE_JSON, sdk_type);
+    REPORT_HANDLE rpt_handle = report_initialize(REPORTER_TYPE_JSON, analysis_info->target_sdk);
     if (rpt_handle == NULL)
     {
+        (void)printf("Failure loading reporter object\r\n");
         result = __LINE__;
     }
     else
@@ -139,18 +214,18 @@ static int report_data(SDK_TYPE sdk_type)
 int main(int argc, char* argv[])
 {
     int result;
-    ANALYSIS_INFO analysis_info;
+    ANALYSIS_INFO analysis_info = { 0 };
     TICK_COUNTER_HANDLE tickcounter_handle;
 
     if (parse_command_line(argc, argv, &analysis_info) != 0)
     {
-        (void)printf("Failure parsing command line\r\n");
         print_help();
         result = __LINE__;
     }
     else if (validate_args(&analysis_info) != 0)
     {
-        (void)printf("Failure parsing command line\r\n");
+        (void)printf("invalid command line arguments\r\n");
+        print_help();
         result = __LINE__;
     }
     else if ((tickcounter_handle = tickcounter_create()) == NULL)
@@ -160,10 +235,11 @@ int main(int argc, char* argv[])
     }
     else
     {
-        EXEC_INFO exec_info;
-        exec_info.sdk_type = SDK_TYPE_C;
-
-        exec_info.bin_size = binary_handler_get_size(analysis_info.process_filename, exec_info.sdk_type);
+        ANALYSIS_RUN analysis_run = { 0 };
+        if (analysis_info.target_sdk == SDK_TYPE_C)
+        {
+            analysis_run.exec_info.bin_size = binary_handler_get_size(analysis_info.process_filename, analysis_info.target_sdk);
+        }
 
         // Create the process
         PROCESS_HANDLER_HANDLE proc_handle = process_handler_create(analysis_info.process_filename, NULL, NULL);
@@ -174,6 +250,7 @@ int main(int argc, char* argv[])
         }
         else
         {
+            size_t read_time = DEFAULT_PROCESS_MEMORY_READ_TIME_SEC;
             tickcounter_ms_t last_poll_time = 0;
             tickcounter_ms_t current_time = 0;
             tickcounter_get_current_ms(tickcounter_handle, &last_poll_time);
@@ -185,14 +262,11 @@ int main(int argc, char* argv[])
             }
             else
             {
-                PROCESS_INFO proc_info_min = { 0 };
-                PROCESS_INFO proc_info_max = { 0 };
-                PROCESS_INFO proc_info_avg = { 0 };
                 size_t iteration = 0;
                 do
                 {
                     tickcounter_get_current_ms(tickcounter_handle, &current_time);
-                    if ((current_time - last_poll_time) / 1000 > PROCESS_MEMORY_READ_TIME_SEC)
+                    if ((current_time - last_poll_time) > read_time)
                     {
                         PROCESS_INFO proc_info;
                         last_poll_time = current_time;
@@ -202,20 +276,37 @@ int main(int argc, char* argv[])
                             (void)printf("mem: %d threads: %d, handle: %d\r\n", proc_info.memory_size, proc_info.num_threads, proc_info.handle_cnt);
 
                             // Calculate the min values
-                            proc_info.handle_cnt = proc_info.handle_cnt < proc_info_min.handle_cnt ? proc_info.handle_cnt : proc_info_min.handle_cnt;
-                            proc_info.num_threads = proc_info.num_threads < proc_info_min.num_threads ? proc_info.num_threads : proc_info_min.num_threads;
-                            proc_info.memory_size = proc_info.memory_size < proc_info_min.memory_size ? proc_info.memory_size : proc_info_min.memory_size;
+                            if (analysis_run.proc_info_min.handle_cnt == 0 || proc_info.handle_cnt < analysis_run.proc_info_min.handle_cnt)
+                            {
+                                analysis_run.proc_info_min.handle_cnt = proc_info.handle_cnt;
+                            }
+                            if (proc_info.num_threads < analysis_run.proc_info_min.num_threads)
+                            {
+                                analysis_run.proc_info_min.num_threads = proc_info.num_threads;
+                            }
+                            if (proc_info.memory_size < analysis_run.proc_info_min.memory_size)
+                            {
+                                analysis_run.proc_info_min.memory_size = proc_info.memory_size;
+                            }
 
                             // Calculate max values
-                            proc_info.handle_cnt = proc_info.handle_cnt > proc_info_min.handle_cnt ? proc_info.handle_cnt : proc_info_min.handle_cnt;
-                            proc_info.num_threads = proc_info.num_threads > proc_info_min.num_threads ? proc_info.num_threads : proc_info_min.num_threads;
-                            proc_info.memory_size = proc_info.memory_size > proc_info_min.memory_size ? proc_info.memory_size : proc_info_min.memory_size;
+                            if (proc_info.handle_cnt > analysis_run.proc_info_min.handle_cnt)
+                            {
+                                analysis_run.proc_info_min.handle_cnt = proc_info.handle_cnt;
+                            }
+                            if (proc_info.num_threads > analysis_run.proc_info_min.num_threads)
+                            {
+                                analysis_run.proc_info_min.num_threads = proc_info.num_threads;
+                            }
+                            if (proc_info.memory_size > analysis_run.proc_info_min.memory_size)
+                            {
+                                analysis_run.proc_info_min.memory_size = proc_info.memory_size;
+                            }
                         }
 
                         NETWORK_INFO network_info;
                         if (process_handler_get_network_info(proc_handle, &network_info) == 0)
                         {
-
                         }
                     }
                     ThreadAPI_Sleep(10);

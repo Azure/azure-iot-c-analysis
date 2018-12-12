@@ -237,6 +237,13 @@ int process_handler_get_process_info(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO
     return result;
 }
 
+int process_handler_get_network_info(PROCESS_HANDLER_HANDLE handle, NETWORK_INFO* network_info)
+{
+    int result;
+    result = 0;
+    return result;
+}
+
 /*uint32_t process_handler_get_memory_used(PROCESS_HANDLER_HANDLE handle)
 {
     uint32_t result;

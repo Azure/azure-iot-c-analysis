@@ -66,6 +66,7 @@ typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
 
     typedef enum SDK_TYPE_TAG
     {
+        SDK_TYPE_UNKNOWN,
         SDK_TYPE_C,
         SDK_TYPE_CSHARP,
         SDK_TYPE_JAVA,
