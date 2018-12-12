@@ -14,20 +14,7 @@ extern "C" {
 #include <stdint.h>
 #endif
 
-typedef struct PROCESS_INFO_TAG
-{
-    uint32_t num_threads;
-    uint32_t memory_size;
-    uint32_t handle_cnt;
-} PROCESS_INFO;
-
-typedef struct NETWORK_INFO_TAG
-{
-    uint32_t bytes_recv;
-    uint32_t packets_recv;
-    uint32_t bytes_transmit;
-    uint32_t packets_transmit;
-} NETWORK_INFO;
+#include "app_analysis_const.h"
 
 typedef struct PROCESS_HANDLER_INFO_TAG* PROCESS_HANDLER_HANDLE;
 

@@ -12,6 +12,8 @@ extern "C" {
 #include <stddef.h>
 #endif
 
+#include "app_analysis_const.h"
+
 static const char* MQTT_PROTOCOL_NAME = "MQTT PROTOCOL";
 static const char* MQTT_WS_PROTOCOL_NAME = "MQTT WS PROTOCOL";
 static const char* HTTP_PROTOCOL_NAME = "HTTP PROTOCOL";
@@ -25,16 +27,6 @@ typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
 #else
     static const char* OS_NAME = "Linux";
 #endif
-
-    typedef enum PROTOCOL_TYPE_TAG
-    {
-        PROTOCOL_UNKNOWN,
-        PROTOCOL_MQTT,
-        PROTOCOL_MQTT_WS,
-        PROTOCOL_HTTP,
-        PROTOCOL_AMQP,
-        PROTOCOL_AMQP_WS
-    } PROTOCOL_TYPE;
 
     typedef enum FEATURE_TYPE_TAG
     {
@@ -56,22 +48,6 @@ typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
         OPERATION_MEMORY,
         OPERATION_BINARY_SIZE,
     } OPERATION_TYPE;
-
-    typedef enum REPORTER_TYPE_TAG
-    {
-        REPORTER_TYPE_JSON,
-        REPORTER_TYPE_CSV,
-        REPORTER_TYPE_MD
-    } REPORTER_TYPE;
-
-    typedef enum SDK_TYPE_TAG
-    {
-        SDK_TYPE_UNKNOWN,
-        SDK_TYPE_C,
-        SDK_TYPE_CSHARP,
-        SDK_TYPE_JAVA,
-        SDK_TYPE_NODE
-    } SDK_TYPE;
 
     typedef struct CONNECTION_INFO_TAG
     {
@@ -104,10 +80,10 @@ typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
         SDK_TYPE sdk_type;
     } BINARY_INFO;
 
-    extern REPORT_HANDLE report_initialize(REPORTER_TYPE rpt_type, SDK_TYPE sdk_type);
+    extern REPORT_HANDLE report_initialize(REPORTER_TYPE rpt_type, SDK_TYPE sdk_type, PROTOCOL_TYPE protocol);
     extern void report_deinitialize(REPORT_HANDLE handle);
     
-    extern void report_memory_usage(REPORT_HANDLE handle, const MEM_ANALYSIS_INFO* iot_mem_info);
+    extern void report_memory_usage(REPORT_HANDLE handle, const char* description, const PROCESS_INFO* process_info);
     extern void report_binary_sizes(REPORT_HANDLE handle, const BINARY_INFO* bin_info);
     extern void report_network_usage(REPORT_HANDLE handle, const MEM_ANALYSIS_INFO* iot_mem_info);
 

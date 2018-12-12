@@ -33,6 +33,7 @@ typedef struct ANALYSIS_INFO_TAG
     const char* azure_conn_string;
     const char* process_arguments;
     SDK_TYPE target_sdk;
+    PROTOCOL_TYPE protocol_type;
 } ANALYSIS_INFO;
 
 typedef struct EXEC_INFO_TAG
@@ -168,6 +169,8 @@ static int parse_command_line(int argc, char* argv[], ANALYSIS_INFO* anaylsis_in
             argument_type = ARGUEMENT_TYPE_UNKNOWN;
         }
     }
+
+    anaylsis_info->protocol_type = PROTOCOL_MQTT;
     return result;
 }
 
@@ -191,11 +194,11 @@ static int validate_args(ANALYSIS_INFO* anaylsis_info)
     return result;
 }
 
-static int report_data(ANALYSIS_INFO* analysis_info, ANALYSIS_RUN run_info)
+static int report_data(const ANALYSIS_INFO* analysis_info, const ANALYSIS_RUN* run_info, PROTOCOL_TYPE type)
 {
     int result;
 
-    REPORT_HANDLE rpt_handle = report_initialize(REPORTER_TYPE_JSON, analysis_info->target_sdk);
+    REPORT_HANDLE rpt_handle = report_initialize(REPORTER_TYPE_JSON, analysis_info->target_sdk, type);
     if (rpt_handle == NULL)
     {
         (void)printf("Failure loading reporter object\r\n");
@@ -203,7 +206,13 @@ static int report_data(ANALYSIS_INFO* analysis_info, ANALYSIS_RUN run_info)
     }
     else
     {
-        //report_memory_usage(rpt_handle, const MEM_ANALYSIS_INFO* iot_mem_info);
+        //
+        report_memory_usage(rpt_handle, "average", &run_info->proc_info_avg);
+        report_memory_usage(rpt_handle, "minimum", &run_info->proc_info_min);
+        report_memory_usage(rpt_handle, "maximum", &run_info->proc_info_max);
+
+        report_write(rpt_handle, NULL, NULL);
+
         report_deinitialize(rpt_handle);
         result = 0;
     }
@@ -211,38 +220,20 @@ static int report_data(ANALYSIS_INFO* analysis_info, ANALYSIS_RUN run_info)
     return result;
 }
 
-int main(int argc, char* argv[])
+static int execute_analysis_run(const ANALYSIS_INFO* analysis_info, ANALYSIS_RUN* run_info)
 {
     int result;
-    ANALYSIS_INFO analysis_info = { 0 };
     TICK_COUNTER_HANDLE tickcounter_handle;
 
-    if (parse_command_line(argc, argv, &analysis_info) != 0)
-    {
-        print_help();
-        result = __LINE__;
-    }
-    else if (validate_args(&analysis_info) != 0)
-    {
-        (void)printf("invalid command line arguments\r\n");
-        print_help();
-        result = __LINE__;
-    }
-    else if ((tickcounter_handle = tickcounter_create()) == NULL)
+    if ((tickcounter_handle = tickcounter_create()) == NULL)
     {
         (void)printf("Failure creating tick counter\r\n");
         result = __LINE__;
     }
     else
     {
-        ANALYSIS_RUN analysis_run = { 0 };
-        if (analysis_info.target_sdk == SDK_TYPE_C)
-        {
-            analysis_run.exec_info.bin_size = binary_handler_get_size(analysis_info.process_filename, analysis_info.target_sdk);
-        }
-
         // Create the process
-        PROCESS_HANDLER_HANDLE proc_handle = process_handler_create(analysis_info.process_filename, NULL, NULL);
+        PROCESS_HANDLER_HANDLE proc_handle = process_handler_create(analysis_info->process_filename, NULL, NULL);
         if (proc_handle == NULL)
         {
             (void)printf("Failure creating process handler\r\n");
@@ -255,7 +246,7 @@ int main(int argc, char* argv[])
             tickcounter_ms_t current_time = 0;
             tickcounter_get_current_ms(tickcounter_handle, &last_poll_time);
 
-            if (process_handler_start(proc_handle, analysis_info.process_arguments) != 0)
+            if (process_handler_start(proc_handle, analysis_info->process_arguments) != 0)
             {
                 (void)printf("Failure starting process handler\r\n");
                 result = __LINE__;
@@ -263,6 +254,7 @@ int main(int argc, char* argv[])
             else
             {
                 size_t iteration = 0;
+                PROCESS_INFO temp_accumulator = { 0 };
                 do
                 {
                     tickcounter_get_current_ms(tickcounter_handle, &current_time);
@@ -276,32 +268,35 @@ int main(int argc, char* argv[])
                             (void)printf("mem: %d threads: %d, handle: %d\r\n", proc_info.memory_size, proc_info.num_threads, proc_info.handle_cnt);
 
                             // Calculate the min values
-                            if (analysis_run.proc_info_min.handle_cnt == 0 || proc_info.handle_cnt < analysis_run.proc_info_min.handle_cnt)
+                            if (run_info->proc_info_min.handle_cnt == 0 || proc_info.handle_cnt < run_info->proc_info_min.handle_cnt)
                             {
-                                analysis_run.proc_info_min.handle_cnt = proc_info.handle_cnt;
+                                run_info->proc_info_min.handle_cnt = proc_info.handle_cnt;
                             }
-                            if (proc_info.num_threads < analysis_run.proc_info_min.num_threads)
+                            if (run_info->proc_info_min.num_threads == 0 || proc_info.num_threads < run_info->proc_info_min.num_threads)
                             {
-                                analysis_run.proc_info_min.num_threads = proc_info.num_threads;
+                                run_info->proc_info_min.num_threads = proc_info.num_threads;
                             }
-                            if (proc_info.memory_size < analysis_run.proc_info_min.memory_size)
+                            if (run_info->proc_info_min.memory_size == 0 || proc_info.memory_size < run_info->proc_info_min.memory_size)
                             {
-                                analysis_run.proc_info_min.memory_size = proc_info.memory_size;
+                                run_info->proc_info_min.memory_size = proc_info.memory_size;
                             }
 
                             // Calculate max values
-                            if (proc_info.handle_cnt > analysis_run.proc_info_min.handle_cnt)
+                            if (proc_info.handle_cnt > run_info->proc_info_min.handle_cnt)
                             {
-                                analysis_run.proc_info_min.handle_cnt = proc_info.handle_cnt;
+                                run_info->proc_info_min.handle_cnt = proc_info.handle_cnt;
                             }
-                            if (proc_info.num_threads > analysis_run.proc_info_min.num_threads)
+                            if (proc_info.num_threads > run_info->proc_info_min.num_threads)
                             {
-                                analysis_run.proc_info_min.num_threads = proc_info.num_threads;
+                                run_info->proc_info_min.num_threads = proc_info.num_threads;
                             }
-                            if (proc_info.memory_size > analysis_run.proc_info_min.memory_size)
+                            if (proc_info.memory_size > run_info->proc_info_min.memory_size)
                             {
-                                analysis_run.proc_info_min.memory_size = proc_info.memory_size;
+                                run_info->proc_info_min.memory_size = proc_info.memory_size;
                             }
+                            temp_accumulator.handle_cnt += proc_info.handle_cnt;
+                            temp_accumulator.handle_cnt += proc_info.num_threads;
+                            temp_accumulator.handle_cnt += proc_info.memory_size;
                         }
 
                         NETWORK_INFO network_info;
@@ -318,7 +313,55 @@ int main(int argc, char* argv[])
         }
         tickcounter_destroy(tickcounter_handle);
     }
+    return result;
+}
 
+int main(int argc, char* argv[])
+{
+    int result;
+    ANALYSIS_INFO analysis_info = { 0 };
+
+    if (parse_command_line(argc, argv, &analysis_info) != 0)
+    {
+        print_help();
+        result = __LINE__;
+    }
+    else if (validate_args(&analysis_info) != 0)
+    {
+        (void)printf("invalid command line arguments\r\n");
+        print_help();
+        result = __LINE__;
+    }
+    else
+    {
+        ANALYSIS_RUN analysis_run = { 0 };
+        if (analysis_info.target_sdk == SDK_TYPE_C)
+        {
+            analysis_run.exec_info.bin_size = binary_handler_get_size(analysis_info.process_filename, analysis_info.target_sdk);
+        }
+
+        if (execute_analysis_run(&analysis_info, &analysis_run) != 0)
+        {
+            result = __LINE__;
+        }
+        else
+        {
+            analysis_run.proc_info_avg.handle_cnt = 10;
+            analysis_run.proc_info_avg.memory_size = 200000;
+            analysis_run.proc_info_avg.num_threads = 1;
+
+            analysis_run.proc_info_min.handle_cnt = 5;
+            analysis_run.proc_info_min.memory_size = 100000;
+            analysis_run.proc_info_min.num_threads = 1;
+
+            analysis_run.proc_info_max.handle_cnt = 30;
+            analysis_run.proc_info_max.memory_size = 400000;
+            analysis_run.proc_info_max.num_threads = 2;
+
+            report_data(&analysis_info, &analysis_run, analysis_info.protocol_type);
+            result = 0;
+        }
+    }
     (void)printf("Press any key to continue:");
     (void)getchar();
     return result;
