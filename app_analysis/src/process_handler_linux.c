@@ -10,6 +10,8 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <dirent.h>
+
 #include "process_handler.h"
 
 #include "azure_c_shared_utility/crt_abstractions.h"
@@ -58,42 +60,107 @@ static int get_process_id(const char* process_name)
     return result;
 }
 
-// http://man7.org/linux/man-pages/man5/proc.5.html
-static int get_process_stat(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO* proc_info)
+static uint32_t get_total_cpu_time(void)
 {
-    int result;
-    char proc_file[128];
-    sprintf(proc_file, "/proc/%d/stat", handle->proc_id);
-
-    FILE* stat_info = fopen(proc_file, "r");
+    uint32_t result;
+    FILE* stat_info = fopen("/proc/stat", "r");
     if (stat_info == NULL)
     {
-        result = __LINE__;
+        LogError("failure opening system stat file");
+        result = 0;
     }
     else
     {
-        int pid;
-        char filename[128];
-        char state;
-        int parent_pid, proc_grpid, session_id, tty_nr, tpgid;
-        unsigned int flags;
-        unsigned long min_faults, num_min_ft, maj_faults, num_maj_ft, utime, sched_time, virt_mem_size;
-        long cu_time, cs_time, dummy, num_treads;
-        unsigned long long start_time;
-
-        if (fscanf(stat_info, "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld %ld %ld %llu %lu", &pid, filename, &state, &parent_pid, &proc_grpid, &session_id, &tty_nr,
-        &tpgid, &flags, &min_faults, &num_min_ft, &maj_faults, &num_maj_ft, &utime, &sched_time, &cu_time, &cs_time, &dummy, &dummy, &num_treads, &dummy, &start_time, &virt_mem_size) == 0)
+        char name[16];
+        uint32_t user_cpu, nice_cpu, system_cpu;
+        if (fscanf(stat_info, "%s %u %u %u", name, &user_cpu, &nice_cpu, &system_cpu) == 0)
         {
+            LogError("failure formatting system stat file");
+            result = 0;
+        }
+        else
+        {
+            result = user_cpu + nice_cpu + system_cpu;
+        }
+        fclose(stat_info);
+    }
+    return result;
+}
+
+static uint32_t get_total_handles(pid_t proc_id)
+{
+    uint32_t result = 0;
+    DIR* dirp;
+    struct dirent* entry;
+    char proc_file[128];
+
+    sprintf(proc_file, "/proc/%d/fd", proc_id);
+    if ((dirp = opendir(proc_file)) != NULL)
+    {
+        while ( (entry = readdir(dirp)) != NULL) {
+            //if (entry->d_type == DT_REG)
+            //{ /* If the entry is a regular file */
+                result++;
+            //}
+        }
+        closedir(dirp);
+    }
+    else
+    {
+        result = 0;
+    }
+    return result;
+}
+// http://man7.org/linux/man-pages/man5/proc.5.html
+static int get_process_stat(PROCESS_HANDLER_INFO* handle, PROCESS_INFO* proc_info)
+{
+    int result;
+
+    uint32_t total_cpu = get_total_cpu_time();
+    if (total_cpu == 0)
+    {
+            LogError("failure getting total cpu time");
+            result = __LINE__;
+    }
+    else
+    {
+        char proc_file[128];
+        sprintf(proc_file, "/proc/%d/stat", handle->proc_id);
+        FILE* stat_info = fopen(proc_file, "r");
+        if (stat_info == NULL)
+        {
+            LogError("failure opening process stat file");
             result = __LINE__;
         }
         else
         {
-            handle->process_state = state;
-            proc_info->num_threads = (uint32_t)num_treads;
-            proc_info->memory_size = (uint32_t)virt_mem_size;
-            result = 0;
+            int pid;
+            char filename[128];
+            char state;
+            int parent_pid, proc_grpid, session_id, tty_nr, tpgid;
+            unsigned int flags;
+            unsigned long min_faults, num_min_ft, maj_faults, num_maj_ft, utime, stime, virt_mem_size;
+            long cu_time, cs_time, dummy, num_treads, rss;
+            unsigned long long start_time;
+
+            if (fscanf(stat_info, "%d %s %c %d %d %d %d %d %u %lu %lu %lu %lu %lu %lu %ld %ld %ld %ld %ld %ld %llu %lu %ld", &pid, filename, &state, &parent_pid, &proc_grpid, &session_id, &tty_nr,
+            &tpgid, &flags, &min_faults, &num_min_ft, &maj_faults, &num_maj_ft, &utime, &stime, &cu_time, &cs_time, &dummy, &dummy, &num_treads, &dummy, &start_time, &virt_mem_size, &rss) == 0)
+            {
+                LogError("failure formatting process stat file");
+                result = __LINE__;
+            }
+            else
+            {
+                if (handle->process_state = state;
+                proc_info->num_threads = (uint32_t)num_treads;
+                proc_info->memory_size = (uint32_t)virt_mem_size;
+                proc_info->cpu_load = (float)(100*(utime+stime)/(float)total_cpu);
+                result = 0;
+            }
+            fclose(stat_info);
+
+            proc_info->handle_cnt = get_total_handles(handle->proc_id);
         }
-        fclose(stat_info);
     }
     return result;
 }
@@ -184,6 +251,7 @@ int process_handler_start(PROCESS_HANDLER_HANDLE handle, const char* cmdline_arg
             ThreadAPI_Sleep(2000);
             if ((handle->proc_id = get_process_id(handle->process_filename)) == 0)
             {
+                LogError("Failure getting process id of application %s", handle->process_filename);
                 result = __LINE__;
             }
             else
@@ -223,13 +291,20 @@ bool process_handler_is_active(PROCESS_HANDLER_HANDLE handle)
     {
         result = false;
     }
-    else if (handle->process_state != 'R')
+    else 
     {
-        result = false;
-    }
-    else
-    {
-        result = (get_process_id(handle->process_filename) != 0);
+        // is_app_running(char app_state)
+        switch (handle->process_state)
+        {
+            case 'R':
+            case 'S':
+            case 'D':
+                result = (get_process_id(handle->process_filename) != 0);
+                break;
+            default:
+                result = false;
+                break;
+        }
     }
     return result;
 }
@@ -269,47 +344,4 @@ int process_handler_get_network_info(PROCESS_HANDLER_HANDLE handle, NETWORK_INFO
         result = 0;
     }
     return result;
-} 
-
-
-/*uint32_t process_handler_get_memory_used(PROCESS_HANDLER_HANDLE handle)
-{
-    uint32_t result;
-    if (handle == NULL)
-    {
-        result = 0;
-    }
-    else
-    {
-        if (get_process_stat(handle) == 0)
-        {
-            result = 0;
-        }
-        else
-        {
-            result = handle->memory_size;
-        }
-    }
-    return result;
 }
-
-uint32_t process_handler_get_threads(PROCESS_HANDLER_HANDLE handle)
-{
-    uint32_t result;
-    if (handle == NULL)
-    {
-        result = 0;
-    }
-    else
-    {
-        if (get_process_stat(handle) == 0)
-        {
-            result = 0;
-        }
-        else
-        {
-            result = handle->num_threads;
-        }
-    }
-    return result;
-}*/

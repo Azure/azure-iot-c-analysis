@@ -265,7 +265,7 @@ static int execute_analysis_run(const ANALYSIS_INFO* analysis_info, ANALYSIS_RUN
                         iteration++;
                         if (process_handler_get_process_info(proc_handle, &proc_info) == 0)
                         {
-                            (void)printf("mem: %d threads: %d, handle: %d\r\n", proc_info.memory_size, proc_info.num_threads, proc_info.handle_cnt);
+                            (void)printf("mem: %u threads: %u, handle: %u cpu %f\r\n", proc_info.memory_size, proc_info.num_threads, proc_info.handle_cnt, proc_info.cpu_load);
 
                             // Calculate the min values
                             if (run_info->proc_info_min.handle_cnt == 0 || proc_info.handle_cnt < run_info->proc_info_min.handle_cnt)
@@ -299,10 +299,10 @@ static int execute_analysis_run(const ANALYSIS_INFO* analysis_info, ANALYSIS_RUN
                             temp_accumulator.handle_cnt += proc_info.memory_size;
                         }
 
-                        NETWORK_INFO network_info;
-                        if (process_handler_get_network_info(proc_handle, &network_info) == 0)
-                        {
-                        }
+                        //NETWORK_INFO network_info;
+                        //if (process_handler_get_network_info(proc_handle, &network_info) == 0)
+                        //{
+                        //}
                     }
                     ThreadAPI_Sleep(10);
                 } while (process_handler_is_active(proc_handle));

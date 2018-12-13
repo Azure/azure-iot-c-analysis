@@ -41,7 +41,7 @@ static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"sdkAnalysis\" : { \"osTy
 static const char* const NODE_OPERATING_SYSTEM = "osType";
 
 static const char* const BINARY_SIZE_JSON_FMT = "{ \"rpt_type\": \"ROM\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"binarySize\" : \"%s\" }";
-static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"analysisType\": \"Memory\", \"description\" : \"%s\", \"threads\" : \"%s\", \"memory\" : \"%s\", \"handles\" : \"%s\", \"cpuLoad\" : \"%s\" } }";
+static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"analysisType\": \"Memory\", \"description\" : \"%s\", \"threads\" : \"%s\", \"memory\" : \"%s\", \"handles\" : \"%s\", \"cpuLoad\" : \"%f %%\" } }";
 static const char* const NETWORK_ANALYSIS_JSON_FMT = "{ \"rpt_type\": \"NETWORK\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgPayload\" : %d, \"bytesSent\" : \"%s\", \"numSends\" : \"%s\", \"recvBytes\" : \"%s\", \"numRecv\" : \"%s\" } }";
 
 static const char* const BINARY_SIZE_CSV_FMT = "%s, %s, %s, %s, %s, %s";
@@ -110,7 +110,7 @@ static void format_value(uint64_t value, char formatting[FORMAT_MAX_LEN])
 static void format_bytes(uint32_t bytes, char formatting[FORMAT_MAX_LEN])
 {
     char temp[FORMAT_MAX_LEN];
-    sprintf(temp, "%ld", bytes);
+    sprintf(temp, "%u", bytes);
     memset(formatting, 0, FORMAT_MAX_LEN);
 
     size_t length = strlen(temp);
@@ -558,15 +558,13 @@ void report_memory_usage(REPORT_HANDLE handle, const char* description, const PR
         char threads[FORMAT_MAX_LEN];
         char memory[FORMAT_MAX_LEN];
         char handles[FORMAT_MAX_LEN];
-        char cpu_load[FORMAT_MAX_LEN];
         
         format_bytes(process_info->num_threads, threads);
         format_bytes(process_info->memory_size, memory);
         format_bytes(process_info->handle_cnt, handles);
-        format_bytes(process_info->cpu_load, cpu_load);
 
         const char* string_format = get_format_value(handle, OPERATION_MEMORY);
-        STRING_HANDLE analysis_data = STRING_construct_sprintf(string_format, description, threads, memory, handles, cpu_load);
+        STRING_HANDLE analysis_data = STRING_construct_sprintf(string_format, description, threads, memory, handles, process_info->cpu_load);
         if (analysis_data == NULL)
         {
             LogError("ERROR: Failed to allocate memory json");
