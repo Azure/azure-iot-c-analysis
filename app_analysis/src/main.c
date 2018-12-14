@@ -248,6 +248,7 @@ static int execute_analysis_run(const ANALYSIS_INFO* analysis_info, ANALYSIS_RUN
             }
             else
             {
+                bool continue_run = true;
                 size_t iteration = 0;
                 PROCESS_INFO temp_accumulator = { 0 };
                 do
@@ -255,7 +256,7 @@ static int execute_analysis_run(const ANALYSIS_INFO* analysis_info, ANALYSIS_RUN
                     tickcounter_get_current_ms(tickcounter_handle, &current_time);
                     if ((current_time - last_poll_time) > read_time)
                     {
-                        PROCESS_INFO proc_info;
+                        PROCESS_INFO proc_info = { 0 };
                         last_poll_time = current_time;
                         iteration++;
                         if (process_handler_get_process_info(proc_handle, &proc_info) == 0)
@@ -277,21 +278,26 @@ static int execute_analysis_run(const ANALYSIS_INFO* analysis_info, ANALYSIS_RUN
                             }
 
                             // Calculate max values
-                            if (proc_info.handle_cnt > run_info->proc_info_min.handle_cnt)
+                            if (proc_info.handle_cnt > run_info->proc_info_max.handle_cnt)
                             {
-                                run_info->proc_info_min.handle_cnt = proc_info.handle_cnt;
+                                run_info->proc_info_max.handle_cnt = proc_info.handle_cnt;
                             }
-                            if (proc_info.num_threads > run_info->proc_info_min.num_threads)
+                            if (proc_info.num_threads > run_info->proc_info_max.num_threads)
                             {
-                                run_info->proc_info_min.num_threads = proc_info.num_threads;
+                                run_info->proc_info_max.num_threads = proc_info.num_threads;
                             }
-                            if (proc_info.memory_size > run_info->proc_info_min.memory_size)
+                            if (proc_info.memory_size > run_info->proc_info_max.memory_size)
                             {
-                                run_info->proc_info_min.memory_size = proc_info.memory_size;
+                                run_info->proc_info_max.memory_size = proc_info.memory_size;
                             }
                             temp_accumulator.handle_cnt += proc_info.handle_cnt;
-                            temp_accumulator.handle_cnt += proc_info.num_threads;
-                            temp_accumulator.handle_cnt += proc_info.memory_size;
+                            temp_accumulator.num_threads += proc_info.num_threads;
+                            temp_accumulator.memory_size += proc_info.memory_size;
+                            temp_accumulator.cpu_load += proc_info.cpu_load;
+                        }
+                        else
+                        {
+                            continue_run = false;;
                         }
 
                         //NETWORK_INFO network_info;
@@ -300,9 +306,14 @@ static int execute_analysis_run(const ANALYSIS_INFO* analysis_info, ANALYSIS_RUN
                         //}
                     }
                     ThreadAPI_Sleep(10);
-                } while (process_handler_is_active(proc_handle));
+                } while (process_handler_is_active(proc_handle) && continue_run);
                 process_handler_end(proc_handle);
                 result = 0;
+
+                run_info->proc_info_avg.handle_cnt = (uint32_t)(temp_accumulator.handle_cnt / iteration);
+                run_info->proc_info_avg.memory_size = (uint32_t)(temp_accumulator.memory_size / iteration);
+                run_info->proc_info_avg.num_threads = (uint32_t)(temp_accumulator.num_threads / iteration);
+                run_info->proc_info_avg.cpu_load = (temp_accumulator.cpu_load / iteration);
             }
             process_handler_destroy(proc_handle);
         }
@@ -335,13 +346,14 @@ int main(int argc, char* argv[])
             analysis_run.exe_info.binary_size = binary_handler_get_size(analysis_info.process_filename, analysis_info.target_sdk);
         }
 
-        //if (execute_analysis_run(&analysis_info, &analysis_run) != 0)
-        //{
-        //    result = __LINE__;
-        //}
-        //else
+        if (execute_analysis_run(&analysis_info, &analysis_run) != 0)
         {
-            analysis_run.proc_info_avg.handle_cnt = 10;
+            (void)printf("execute_analysis_run failed\r\n");
+            result = __LINE__;
+        }
+        else
+        {
+            /*analysis_run.proc_info_avg.handle_cnt = 10;
             analysis_run.proc_info_avg.memory_size = 200000;
             analysis_run.proc_info_avg.num_threads = 1;
             analysis_run.proc_info_avg.cpu_load = 9.10f;
@@ -354,7 +366,7 @@ int main(int argc, char* argv[])
             analysis_run.proc_info_max.handle_cnt = 30;
             analysis_run.proc_info_max.memory_size = 400000;
             analysis_run.proc_info_max.num_threads = 2;
-            analysis_run.proc_info_max.cpu_load = 13.00004f;
+            analysis_run.proc_info_max.cpu_load = 13.00004f;*/
 
             report_data(&analysis_info, &analysis_run, analysis_info.protocol_type);
             result = 0;

@@ -37,4 +37,9 @@ include_directories(${SHARED_UTIL_INC_FOLDER} ../deps/parson)
 add_executable(app_analysis ${app_analysis_c_files} ${app_analysis_h_files})
 target_link_libraries(app_analysis aziotsharedutil)
 
+if(WIN32)
+    target_link_libraries(app_analysis pdh)
+else()
+endif()
+
 compileTargetAsC99(app_analysis)

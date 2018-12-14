@@ -4,88 +4,143 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <Windows.h>
-#include <psapi.h>
-#include <tlhelp32.h>
+
+#include <pdh.h>
+#include <pdhmsg.h>
 
 #include "process_handler.h"
 
 #include "azure_c_shared_utility/crt_abstractions.h"
 #include "azure_c_shared_utility/xlogging.h"
 
+static const char* const HANDLE_COUNT_COUNTER_FMT = "\\Process(%s)\\Handle Count";
+static const char* const THREAD_COUNT_COUNTER_FMT = "\\Process(%s)\\Thread Count";
+static const char* const WORKING_SET_COUNTER_FMT = "\\Process(%s)\\Working Set";
+static const char* const PROCESSOR_TIME_COUNTER_FMT = "\\Process(%s)\\%% Processor Time";
+
 typedef struct PROCESS_HANDLER_INFO_TAG
 {
     char* process_filename;
+    char* process_name;
+
     PROCESS_INFORMATION proc_info;
     PROCESS_END_CB process_end_cb;
     void* user_cb;
+
+    HQUERY query_handle;
+    HCOUNTER handle_counter;
+    HCOUNTER thread_counter;
+    HCOUNTER ws_counter;
+    HCOUNTER proc_time_counter;
 } PROCESS_HANDLER_INFO;
 
-static int get_process_stat(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO* proc_info)
+static double retreive_counter_double_value(HCOUNTER handle_counter)
 {
-    int result;
+    double result;
+    PDH_STATUS phd_status;
+    DWORD counter_type;
+    PDH_FMT_COUNTERVALUE counter_value;
 
-    APP_MEMORY_INFORMATION app_mem_info;
-    if (GetProcessInformation(handle->proc_info.hProcess, ProcessAppMemoryInfo, &app_mem_info, sizeof(app_mem_info)))
+    if ((phd_status = PdhGetFormattedCounterValue(handle_counter, PDH_FMT_DOUBLE, &counter_type, &counter_value)) != ERROR_SUCCESS)
     {
-        proc_info->memory_size = (uint32_t)app_mem_info.TotalCommitUsage;
-    }
-
-    DWORD handle_cnt;
-    if (GetProcessHandleCount(handle->proc_info.hProcess, &handle_cnt))
-    {
-        proc_info->handle_cnt = handle_cnt;
-    }
-
-    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPALL, handle->proc_info.dwProcessId);
-    if (snapshot == NULL)
-    {
-        LogError("Failed creating snapshot of system");
-        result = __LINE__;
+        LogError("PdhGetFormattedCounterValue failed with status 0x%x.", phd_status);
+        result = 0;
     }
     else
     {
-        // Get the thread information
-        PROCESSENTRY32 proc_entry;
-        proc_entry.dwSize = sizeof(PROCESSENTRY32);
-        if (!Process32First(snapshot, &proc_entry))
+        result = counter_value.doubleValue;
+    }
+    return result;
+}
+
+static uint32_t retreive_counter_value(HCOUNTER handle_counter)
+{
+    uint32_t result;
+    PDH_STATUS phd_status;
+    DWORD counter_type;
+    PDH_FMT_COUNTERVALUE counter_value;
+
+    if ((phd_status = PdhGetFormattedCounterValue(handle_counter, PDH_FMT_LONG, &counter_type, &counter_value)) != ERROR_SUCCESS)
+    {
+        LogError("PdhGetFormattedCounterValue failed with status 0x%x.", phd_status);
+        result = 0;
+    }
+    else
+    {
+        result = counter_value.longValue;
+    }
+    return result;
+}
+
+static int get_process_stat(PROCESS_HANDLER_INFO* handler_info, PROCESS_INFO* proc_info)
+{
+    int result;
+    PDH_STATUS phd_status;
+
+    phd_status = PdhCollectQueryData(handler_info->query_handle);
+    if (phd_status != ERROR_SUCCESS)
+    {
+        LogError("Failure opening query 0x%x", phd_status);
+        result = __FAILURE__;
+    }
+    else
+    {
+        proc_info->handle_cnt = retreive_counter_value(handler_info->handle_counter);
+        proc_info->memory_size = retreive_counter_value(handler_info->ws_counter);
+        proc_info->num_threads = retreive_counter_value(handler_info->thread_counter);
+        proc_info->cpu_load = retreive_counter_double_value(handler_info->proc_time_counter);
+        result = 0;
+    }
+    return result;
+}
+
+static int open_counter_query(PROCESS_HANDLER_INFO* handler_info)
+{
+    int result;
+    PDH_STATUS phd_status;
+    phd_status = PdhOpenQuery(NULL, 0, &handler_info->query_handle);
+    if (phd_status != ERROR_SUCCESS)
+    {
+        LogError("Failure opening query 0x%x", phd_status);
+        result = __FAILURE__;
+    }
+    else
+    {
+        char counter_path[64];
+
+        if (sprintf(counter_path, HANDLE_COUNT_COUNTER_FMT, handler_info->process_name) == 0 ||
+            ((phd_status = PdhAddCounter(handler_info->query_handle, counter_path, 0, &handler_info->handle_counter)) != ERROR_SUCCESS))
         {
-            LogError("Failed retrieving snapshot");
-            result = __LINE__;
+            LogError("Failure adding query handle counter 0x%x", phd_status);
+            result = __FAILURE__;
+        }
+        else if (sprintf(counter_path, THREAD_COUNT_COUNTER_FMT, handler_info->process_name) == 0 ||
+            ((phd_status = PdhAddCounter(handler_info->query_handle, counter_path, 0, &handler_info->thread_counter)) != ERROR_SUCCESS))
+        {
+            LogError("Failure adding query thread counter 0x%x", phd_status);
+            result = __FAILURE__;
+        }
+        else if (sprintf(counter_path, WORKING_SET_COUNTER_FMT, handler_info->process_name) == 0 ||
+            ((phd_status = PdhAddCounter(handler_info->query_handle, counter_path, 0, &handler_info->ws_counter)) != ERROR_SUCCESS))
+        {
+            LogError("Failure adding query working set counter 0x%x", phd_status);
+            result = __FAILURE__;
+        }
+        else if (sprintf(counter_path, PROCESSOR_TIME_COUNTER_FMT, handler_info->process_name) == 0 ||
+            ((phd_status = PdhAddCounter(handler_info->query_handle, counter_path, 0, &handler_info->proc_time_counter)) != ERROR_SUCCESS))
+        {
+            LogError("Failure adding query process time counter 0x%x", phd_status);
+            result = __FAILURE__;
+        }
+        else if ((phd_status = PdhCollectQueryData(handler_info->query_handle)) != ERROR_SUCCESS)
+        {
+            LogError("Failure intial PdhCollectQueryData 0x%x", phd_status);
+            result = __FAILURE__;
         }
         else
         {
-            do
-            {
-                if (proc_entry.th32ProcessID == handle->proc_info.dwProcessId)
-                {
-                    proc_info->num_threads = proc_entry.cntThreads;
-                }
-            } while (Process32Next(snapshot, &proc_entry));
             result = 0;
         }
-        CloseHandle(snapshot);
-
-
-        /*PROCESS_MEMORY_COUNTERS_EX pmc;
-        pmc.cb = sizeof(PROCESS_MEMORY_COUNTERS_EX);
-        if (!GetProcessMemoryInfo(handle->proc_info.hProcess, (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc)))
-        {
-            LogError("Failed retrieving memory info from process %d", GetLastError());
-            result = __LINE__;
-        }
-        else
-        {
-            /*printf("\tPageFaultCount: %d\n", pmc.PageFaultCount);
-            printf("\tPeakWorkingSetSize: %d\n", pmc.PeakWorkingSetSize);
-            printf("\tWorkingSetSize: %d\n", pmc.WorkingSetSize);
-            printf("\tQuotaPeakPagedPoolUsage: %d\n", pmc.QuotaPeakPagedPoolUsage);
-            printf("\tQuotaPagedPoolUsage: %d\n", pmc.QuotaPagedPoolUsage);
-            printf("\tQuotaPeakNonPagedPoolUsage: %d\n", pmc.QuotaPeakNonPagedPoolUsage);
-            printf("\tQuotaNonPagedPoolUsage: %d\n", pmc.QuotaNonPagedPoolUsage);
-            printf("\tPagefileUsage: %d\n", pmc.PagefileUsage);
-            printf("\tPeakPagefileUsage: %d\n", pmc.PeakPagefileUsage);*/
-            /*proc_info->memory_size = pmc.WorkingSetSize;
-        }*/
     }
     return result;
 }
@@ -104,6 +159,13 @@ PROCESS_HANDLER_HANDLE process_handler_create(const char* process_path, PROCESS_
         if (mallocAndStrcpy_s(&result->process_filename, process_path) != 0)
         {
             LogError("Failure allocating process filename");
+            free(result);
+            result = NULL;
+        }
+        else if (mallocAndStrcpy_s(&result->process_name, "test_app") != 0)
+        {
+            LogError("Failure allocating process filename");
+            free(result->process_filename);
             free(result);
             result = NULL;
         }
@@ -147,6 +209,8 @@ void process_handler_destroy(PROCESS_HANDLER_HANDLE handle)
         handle->proc_info.hProcess = NULL;
         CloseHandle(handle->proc_info.hThread);
         handle->proc_info.hThread = NULL;
+        free(handle->process_filename);
+        free(handle->process_name);
         free(handle);
     }
 }
@@ -169,10 +233,13 @@ int process_handler_start(PROCESS_HANDLER_HANDLE handle, const char* cmdline_arg
             LogError("Failed to start the process %d", GetLastError() );
             result = __LINE__;
         }
+        else if (open_counter_query(handle) != 0)
+        {
+            LogError("Failed opening counter query");
+            result = __LINE__;
+        }
         else
         {
-            printf("Is active %s", process_handler_is_active(handle) ? "true" : "false");
-
             result = 0;
         }
     }
@@ -189,14 +256,12 @@ int process_handler_end(PROCESS_HANDLER_HANDLE handle)
     }
     else
     {
-        if (!TerminateProcess(handle->proc_info.hProcess, 0))
+        if (process_handler_is_active(handle))
         {
-            result = __LINE__;
+            (void)TerminateProcess(handle->proc_info.hProcess, 0);
         }
-        else
-        {
-            result = 0;
-        }
+        PdhCloseQuery(handle->query_handle);
+        result = 0;
     }
     return result;
 }
@@ -225,13 +290,20 @@ int process_handler_get_process_info(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO
     }
     else
     {
-        if (get_process_stat(handle, proc_info) == 0)
+        if (!process_handler_is_active(handle))
         {
-            result = 0;
+            result = __LINE__;
         }
         else
         {
-            result = 0;
+            if (get_process_stat(handle, proc_info) == 0)
+            {
+                result = 0;
+            }
+            else
+            {
+                result = __LINE__;
+            }
         }
     }
     return result;

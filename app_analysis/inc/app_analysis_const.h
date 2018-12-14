@@ -48,7 +48,7 @@ typedef struct PROCESS_INFO_TAG
     uint32_t num_threads;
     uint32_t memory_size;
     uint32_t handle_cnt;
-    float cpu_load;
+    double cpu_load;
 } PROCESS_INFO;
 
 typedef struct NETWORK_INFO_TAG
