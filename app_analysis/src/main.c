@@ -261,7 +261,7 @@ static int execute_analysis_run(const ANALYSIS_INFO* analysis_info, ANALYSIS_RUN
                         iteration++;
                         if (process_handler_get_process_info(proc_handle, &proc_info) == 0)
                         {
-                            (void)printf("mem: %u threads: %u, handle: %u cpu %f\r\n", proc_info.memory_size, proc_info.num_threads, proc_info.handle_cnt, proc_info.cpu_load);
+                            (void)printf("Analysis Run: RAM Util: %u Num Threads: %u, Handle: %u CPU %f\r\n", proc_info.memory_size, proc_info.num_threads, proc_info.handle_cnt, proc_info.cpu_load);
 
                             // Calculate the min values
                             if (run_info->proc_info_min.handle_cnt == 0 || proc_info.handle_cnt < run_info->proc_info_min.handle_cnt)

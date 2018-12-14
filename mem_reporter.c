@@ -40,7 +40,7 @@ static const char* const NODE_BASE_ARRAY = "analysisItem";
 static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"sdkAnalysis\" : { \"osType\": \"%s\", \"sdkType\": \"%s\", \"version\": \"1.0.0\", \"dateTime\": \"%s\", \"transport\": \"%s\", \"analysisItem\" : [] } }";
 static const char* const NODE_OPERATING_SYSTEM = "osType";
 
-static const char* const BINARY_SIZE_JSON_FMT = "{ \"analysisType\": \"Binary\", \"description\" : \"%s\", \"binarySize\" : \"%s\" }";
+static const char* const BINARY_SIZE_JSON_FMT = "{ \"analysisType\": \"Binary\", \"binarySize\" : \"%s\" }";
 static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"analysisType\": \"Memory\", \"description\" : \"%s\", \"threads\" : \"%s\", \"memory\" : \"%s\", \"handles\" : \"%s\", \"cpuLoad\" : \"%.02f %%\" } }";
 static const char* const NETWORK_ANALYSIS_JSON_FMT = "{ \"analysisType\": \"Network\", \"description\" : \"%s\", \"msgSize\" : %d, \"transmitBytes\" : \"%s\", \"transmitCount\" : \"%s\", \"recvBytes\" : \"%s\", \"recvCount\" : \"%s\" } }";
 
@@ -107,10 +107,22 @@ static void format_value(uint64_t value, char formatting[FORMAT_MAX_LEN])
     }
 }
 
-static void format_bytes(uint32_t bytes, char formatting[FORMAT_MAX_LEN])
+static void format_bytes(uint32_t bytes, char formatting[FORMAT_MAX_LEN], bool enable_format)
 {
     char temp[FORMAT_MAX_LEN];
-    sprintf(temp, "%u", bytes);
+    bool is_normalized;
+    uint32_t normalized_value;
+    if (bytes > 1000 && enable_format)
+    {
+        normalized_value = bytes / 1000;
+        is_normalized = true;
+    }
+    else
+    {
+        normalized_value = bytes;
+        is_normalized = false;
+    }
+    sprintf(temp, "%u", normalized_value);
     memset(formatting, 0, FORMAT_MAX_LEN);
 
     size_t length = strlen(temp);
@@ -130,6 +142,12 @@ static void format_bytes(uint32_t bytes, char formatting[FORMAT_MAX_LEN])
             cntr = 0;
         }
         formatting[index + extra_char] = temp[index];
+    }
+    if (is_normalized)
+    {
+        size_t len = strlen(formatting);
+        formatting[len] = ' ';
+        formatting[len+1] = 'k';
     }
 }
 
@@ -465,10 +483,10 @@ void report_binary_sizes(REPORT_HANDLE handle, const char* description, const EX
     if (handle != NULL)
     {
         char byte_formatted[FORMAT_MAX_LEN];
-        format_bytes(exe_info->binary_size, byte_formatted);
+        format_bytes(exe_info->binary_size, byte_formatted, false);
 
         const char* string_format = get_format_value(handle, OPERATION_BINARY_SIZE);
-        STRING_HANDLE binary_data = STRING_construct_sprintf(string_format, description, byte_formatted);
+        STRING_HANDLE binary_data = STRING_construct_sprintf(string_format, byte_formatted);
         if (binary_data == NULL)
         {
             LogError("ERROR: Failed to allocate binary json");
@@ -496,9 +514,9 @@ void report_memory_usage(REPORT_HANDLE handle, const char* description, const PR
         char memory[FORMAT_MAX_LEN];
         char handles[FORMAT_MAX_LEN];
         
-        format_bytes(process_info->num_threads, threads);
-        format_bytes(process_info->memory_size, memory);
-        format_bytes(process_info->handle_cnt, handles);
+        format_bytes(process_info->num_threads, threads, true);
+        format_bytes(process_info->memory_size, memory, true);
+        format_bytes(process_info->handle_cnt, handles, true);
 
         const char* string_format = get_format_value(handle, OPERATION_MEMORY);
         STRING_HANDLE analysis_data = STRING_construct_sprintf(string_format, description, threads, memory, handles, process_info->cpu_load);
