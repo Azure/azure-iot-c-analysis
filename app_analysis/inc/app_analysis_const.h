@@ -11,6 +11,12 @@ extern "C" {
 #include <stdint.h>
 #endif
 
+#ifdef WIN32
+    static const char* OS_NAME = "Windows";
+#else
+    static const char* OS_NAME = "Linux";
+#endif
+
 typedef enum PROTOCOL_TYPE_TAG
 {
     PROTOCOL_UNKNOWN,
@@ -51,6 +57,12 @@ typedef struct NETWORK_INFO_TAG
     uint32_t packets_recv;
     uint32_t bytes_transmit;
     uint32_t packets_transmit;
+    uint32_t msg_size;
 } NETWORK_INFO;
+
+typedef struct EXECUTABLE_INFO_TAG
+{
+    uint32_t binary_size;
+} EXECUTABLE_INFO;
 
 #endif // APP_ANALYSIS_CONST_H

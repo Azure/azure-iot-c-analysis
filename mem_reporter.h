@@ -22,12 +22,6 @@ static const char* AMQP_WS_PROTOCOL_NAME = "AMQP WS PROTOCOL";
 
 typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
 
-#ifdef WIN32
-    static const char* OS_NAME = "Windows";
-#else
-    static const char* OS_NAME = "Linux";
-#endif
-
     typedef enum FEATURE_TYPE_TAG
     {
         FEATURE_TELEMETRY_LL,
@@ -84,8 +78,8 @@ typedef struct REPORT_INFO_TAG* REPORT_HANDLE;
     extern void report_deinitialize(REPORT_HANDLE handle);
     
     extern void report_memory_usage(REPORT_HANDLE handle, const char* description, const PROCESS_INFO* process_info);
-    extern void report_binary_sizes(REPORT_HANDLE handle, const BINARY_INFO* bin_info);
-    extern void report_network_usage(REPORT_HANDLE handle, const MEM_ANALYSIS_INFO* iot_mem_info);
+    extern void report_binary_sizes(REPORT_HANDLE handle, const char* description, const EXECUTABLE_INFO* exe_info);
+    extern void report_network_usage(REPORT_HANDLE handle, const char* description, const MEM_ANALYSIS_INFO* iot_mem_info);
 
     extern bool report_write(REPORT_HANDLE handle, const char* output_file, const char* conn_string);
 

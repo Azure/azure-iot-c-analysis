@@ -7,7 +7,7 @@
 #include "mem_reporter.h"
 
 #include "azure_c_shared_utility/threadapi.h"
-#include "azure_c_shared_utility/gballoc.h"
+//#include "azure_c_shared_utility/gballoc.h"
 #include "azure_c_shared_utility/gbnetwork.h"
 #include "azure_c_shared_utility/strings.h"
 #include "azure_c_shared_utility/agenttime.h"
@@ -40,9 +40,9 @@ static const char* const NODE_BASE_ARRAY = "analysisItem";
 static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"sdkAnalysis\" : { \"osType\": \"%s\", \"sdkType\": \"%s\", \"version\": \"1.0.0\", \"dateTime\": \"%s\", \"transport\": \"%s\", \"analysisItem\" : [] } }";
 static const char* const NODE_OPERATING_SYSTEM = "osType";
 
-static const char* const BINARY_SIZE_JSON_FMT = "{ \"rpt_type\": \"ROM\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"layer\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"binarySize\" : \"%s\" }";
-static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"analysisType\": \"Memory\", \"description\" : \"%s\", \"threads\" : \"%s\", \"memory\" : \"%s\", \"handles\" : \"%s\", \"cpuLoad\" : \"%f %%\" } }";
-static const char* const NETWORK_ANALYSIS_JSON_FMT = "{ \"rpt_type\": \"NETWORK\", \"dateTime\": \"%s\", \"feature\": \"%s\", \"version\": \"%s\", \"transport\" : \"%s\", \"msgPayload\" : %d, \"bytesSent\" : \"%s\", \"numSends\" : \"%s\", \"recvBytes\" : \"%s\", \"numRecv\" : \"%s\" } }";
+static const char* const BINARY_SIZE_JSON_FMT = "{ \"analysisType\": \"Binary\", \"description\" : \"%s\", \"binarySize\" : \"%s\" }";
+static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"analysisType\": \"Memory\", \"description\" : \"%s\", \"threads\" : \"%s\", \"memory\" : \"%s\", \"handles\" : \"%s\", \"cpuLoad\" : \"%.02f %%\" } }";
+static const char* const NETWORK_ANALYSIS_JSON_FMT = "{ \"analysisType\": \"Network\", \"description\" : \"%s\", \"msgSize\" : %d, \"transmitBytes\" : \"%s\", \"transmitCount\" : \"%s\", \"recvBytes\" : \"%s\", \"recvCount\" : \"%s\" } }";
 
 static const char* const BINARY_SIZE_CSV_FMT = "%s, %s, %s, %s, %s, %s";
 static const char* const HEAP_ANALYSIS_CSV_FMT = "%s, %s, %s, %s, %s, %s, %s, %d, %zu, %zu, %zu";
@@ -136,7 +136,6 @@ static void format_bytes(uint32_t bytes, char formatting[FORMAT_MAX_LEN])
 static void add_node_to_csv(const char* field_data, const REPORT_INFO* report_info)
 {
     if (STRING_sprintf(report_info->rpt_value.csv_info.csv_list, "%s", field_data) != 0)
-    //if (STRING_concat(report_info->rpt_value.csv_info.csv_list, field_data) != 0)
     {
         LogError("ERROR: Failed setting field value");
     }
@@ -286,65 +285,6 @@ static const char* get_protocol_name(PROTOCOL_TYPE protocol)
         case PROTOCOL_UNKNOWN:
             result = UNKNOWN_TYPE;
             break;
-    }
-    return result;
-}
-
-static const char* get_layer_type(FEATURE_TYPE rpt_type)
-{
-    const char* result;
-    switch (rpt_type)
-    {
-        case FEATURE_TELEMETRY_LL:
-        case FEATURE_C2D_LL:
-        case FEATURE_METHODS_LL:
-        case FEATURE_TWIN_LL:
-        case FEATURE_PROVISIONING_LL:
-            result = "lower layer";
-            break;
-
-        case FEATURE_TELEMETRY_UL:
-        case FEATURE_C2D_UL:
-        case FEATURE_METHODS_UL:
-        case FEATURE_TWIN_UL:
-        case FEATURE_PROVISIONING_UL:
-            result = "upper layer";
-            break;
-        default:
-            result = UNKNOWN_TYPE;
-            break;
-    }
-    return result;
-}
-
-static const char* get_feature_type(FEATURE_TYPE rpt_type)
-{
-    const char* result;
-    switch (rpt_type)
-    {
-    case FEATURE_TELEMETRY_LL:
-    case FEATURE_TELEMETRY_UL:
-        result = "d2c";
-        break;
-    case FEATURE_C2D_LL:
-    case FEATURE_C2D_UL:
-        result = "c2d";
-        break;
-    case FEATURE_METHODS_LL:
-    case FEATURE_METHODS_UL:
-        result = "method";
-        break;
-    case FEATURE_TWIN_LL:
-    case FEATURE_TWIN_UL:
-        result = "twin";
-        break;
-    case FEATURE_PROVISIONING_LL:
-    case FEATURE_PROVISIONING_UL:
-        result = "dps";
-        break;
-    default:
-        result = UNKNOWN_TYPE;
-        break;
     }
     return result;
 }
@@ -520,25 +460,22 @@ void report_deinitialize(REPORT_HANDLE handle)
     }
 }
 
-void report_binary_sizes(REPORT_HANDLE handle, const BINARY_INFO* bin_info)
+void report_binary_sizes(REPORT_HANDLE handle, const char* description, const EXECUTABLE_INFO* exe_info)
 {
     if (handle != NULL)
     {
-        char date_time[DATE_TIME_LEN];
         char byte_formatted[FORMAT_MAX_LEN];
-        get_report_date(date_time, DATE_TIME_LEN);
-        format_bytes(bin_info->binary_size, byte_formatted);
+        format_bytes(exe_info->binary_size, byte_formatted);
 
-        const char* string_format = get_format_value(handle, bin_info->operation_type);
-        STRING_HANDLE binary_data = STRING_construct_sprintf(string_format, date_time, get_feature_type(bin_info->feature_type),
-            get_layer_type(bin_info->feature_type), bin_info->iothub_version, get_protocol_name(bin_info->iothub_protocol), byte_formatted);
+        const char* string_format = get_format_value(handle, OPERATION_BINARY_SIZE);
+        STRING_HANDLE binary_data = STRING_construct_sprintf(string_format, description, byte_formatted);
         if (binary_data == NULL)
         {
             LogError("ERROR: Failed to allocate binary json");
         }
         else
         {
-            if (bin_info->rpt_type == REPORTER_TYPE_CSV)
+            if (handle->rpt_type == REPORTER_TYPE_CSV)
             {
                 add_node_to_csv(STRING_c_str(binary_data), handle);
             }
@@ -571,36 +508,47 @@ void report_memory_usage(REPORT_HANDLE handle, const char* description, const PR
         }
         else
         {
-            add_node_to_json(STRING_c_str(analysis_data), handle);
+            if (handle->rpt_type == REPORTER_TYPE_CSV)
+            {
+                add_node_to_csv(STRING_c_str(analysis_data), handle);
+            }
+            else
+            {
+                add_node_to_json(STRING_c_str(analysis_data), handle);
+            }
             STRING_delete(analysis_data);
         }
     }
 }
 
-void report_network_usage(REPORT_HANDLE handle, const MEM_ANALYSIS_INFO* iot_mem_info)
+void report_network_usage(REPORT_HANDLE handle, const char* description, const NETWORK_INFO* network_info)
 {
     if (handle != NULL)
     {
-        char date_time[DATE_TIME_LEN];
         char bytes_sent[FORMAT_MAX_LEN];
         char num_sends[FORMAT_MAX_LEN];
         char bytes_recv[FORMAT_MAX_LEN];
         char num_recv[FORMAT_MAX_LEN];
-        get_report_date(date_time, DATE_TIME_LEN);
-        format_value(gbnetwork_getBytesSent(), bytes_sent);
-        format_value(gbnetwork_getNumSends(), num_sends);
-        format_value(gbnetwork_getBytesRecv(), bytes_recv);
-        format_value(gbnetwork_getNumRecv(), num_recv);
+        format_value(network_info->bytes_transmit, bytes_sent);
+        format_value(network_info->packets_transmit, num_sends);
+        format_value(network_info->bytes_recv, bytes_recv);
+        format_value(network_info->packets_recv, num_recv);
 
-        STRING_HANDLE network_data = STRING_construct_sprintf(NETWORK_ANALYSIS_JSON_FMT, date_time, get_feature_type(iot_mem_info->feature_type), iot_mem_info->iothub_version,
-            get_protocol_name(iot_mem_info->iothub_protocol), iot_mem_info->msg_sent, bytes_sent, num_sends, bytes_recv, num_recv);
+        STRING_HANDLE network_data = STRING_construct_sprintf(NETWORK_ANALYSIS_JSON_FMT, description, network_info->msg_size, bytes_sent, num_sends, bytes_recv, num_recv);
         if (network_data == NULL)
         {
             LogError("ERROR: Failed to allocate networking json");
         }
         else
         {
-            add_node_to_json(STRING_c_str(network_data), handle);
+            if (handle->rpt_type == REPORTER_TYPE_CSV)
+            {
+                add_node_to_csv(STRING_c_str(network_data), handle);
+            }
+            else
+            {
+                add_node_to_json(STRING_c_str(network_data), handle);
+            }
             STRING_delete(network_data);
         }
     }
