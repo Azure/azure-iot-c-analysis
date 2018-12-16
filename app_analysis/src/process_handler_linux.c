@@ -111,6 +111,50 @@ static uint32_t get_total_handles(pid_t proc_id)
     }
     return result;
 }
+
+static uint32_t calculate_memory_usage(pid_t proc_id)
+{
+    uint32_t result;
+    char proc_file[128];
+    sprintf(proc_file, "/proc/%d/smaps", proc_id);
+    FILE* smaps_info = fopen(proc_file, "r");
+    if (smaps_info == NULL)
+    {
+        LogError("failure opening system smaps file");
+        result = 0;
+    }
+    else
+    {
+        size_t len = 0;
+        char* smaps_line = NULL;
+        ssize_t read_amt;
+        while ((read_amt = getline(&smaps_line, &len, smaps_info)) != -1)
+        {
+            if (read_amt > 3)
+            {
+                if (strncmp(smaps_line, "Pss", 3) == 0)
+                {
+                    const char* iterator = smaps_line + 3;
+                    do 
+                    {
+                        if (*iterator >= 48 && *iterator <= 57)
+                        {
+                            uint32_t curr_line = atol(iterator);
+                            result += curr_line;
+                            break;
+                        }
+                        iterator++;
+                    } while (iterator != NULL && *iterator != '\n');
+                }
+            }
+        }
+        free(smaps_line);
+        fclose(smaps_info);
+    }
+    return result;
+}
+
+
 // http://man7.org/linux/man-pages/man5/proc.5.html
 static int get_process_stat(PROCESS_HANDLER_INFO* handle, PROCESS_INFO* proc_info)
 {
@@ -119,8 +163,13 @@ static int get_process_stat(PROCESS_HANDLER_INFO* handle, PROCESS_INFO* proc_inf
     uint32_t total_cpu = get_total_cpu_time();
     if (total_cpu == 0)
     {
-            LogError("failure getting total cpu time");
-            result = __LINE__;
+        LogError("failure getting total cpu time");
+        result = __LINE__;
+    }
+    else if ((proc_info->memory_size = calculate_memory_usage(handle->proc_id)) == 0)
+    {
+        LogError("failure getting total memory size");
+        result = __LINE__;
     }
     else
     {
@@ -151,10 +200,9 @@ static int get_process_stat(PROCESS_HANDLER_INFO* handle, PROCESS_INFO* proc_inf
             }
             else
             {
-                if (handle->process_state = state;
+                handle->process_state = state;
                 proc_info->num_threads = (uint32_t)num_treads;
-                proc_info->memory_size = (uint32_t)virt_mem_size;
-                proc_info->cpu_load = (float)(100*(utime+stime)/(float)total_cpu);
+                proc_info->cpu_load = (float)(100*(utime+stime)/total_cpu);
                 result = 0;
             }
             fclose(stat_info);
