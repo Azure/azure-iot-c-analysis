@@ -18,6 +18,9 @@
 #include "azure_c_shared_utility/xlogging.h"
 #include "azure_c_shared_utility/threadapi.h"
 
+static const char* MEMORY_VALUE_NAME = "Pss";
+static const size_t MEMORY_VALUE_LEN = 3;
+
 typedef struct PROCESS_HANDLER_INFO_TAG
 {
     char* process_filename;
@@ -114,7 +117,7 @@ static uint32_t get_total_handles(pid_t proc_id)
 
 static uint32_t calculate_memory_usage(pid_t proc_id)
 {
-    uint32_t result;
+    uint32_t result = 0;
     char proc_file[128];
     sprintf(proc_file, "/proc/%d/smaps", proc_id);
     FILE* smaps_info = fopen(proc_file, "r");
@@ -132,9 +135,9 @@ static uint32_t calculate_memory_usage(pid_t proc_id)
         {
             if (read_amt > 3)
             {
-                if (strncmp(smaps_line, "Pss", 3) == 0)
+                if (strncmp(smaps_line, MEMORY_VALUE_NAME, MEMORY_VALUE_LEN) == 0)
                 {
-                    const char* iterator = smaps_line + 3;
+                    const char* iterator = smaps_line + MEMORY_VALUE_LEN;
                     do 
                     {
                         if (*iterator >= 48 && *iterator <= 57)
@@ -153,7 +156,6 @@ static uint32_t calculate_memory_usage(pid_t proc_id)
     }
     return result;
 }
-
 
 // http://man7.org/linux/man-pages/man5/proc.5.html
 static int get_process_stat(PROCESS_HANDLER_INFO* handle, PROCESS_INFO* proc_info)
@@ -213,7 +215,7 @@ static int get_process_stat(PROCESS_HANDLER_INFO* handle, PROCESS_INFO* proc_inf
     return result;
 }
 
-static int get_network_stat(PROCESS_HANDLER_HANDLE handle, NETWORK_INFO* network_info)
+static int get_network_stat(const PROCESS_HANDLER_INFO* handle, NETWORK_INFO* network_info)
 {
     int result;
     char proc_file[128];
@@ -231,7 +233,16 @@ static int get_network_stat(PROCESS_HANDLER_HANDLE handle, NETWORK_INFO* network
     return result;
 }
 
-PROCESS_HANDLER_HANDLE process_handler_create(const char* process_path, PROCESS_END_CB process_end_cb, void* user_cb)
+static int start_process(const PROCESS_HANDLER_INFO* handle)
+{
+    //switch (handle->)
+    //{
+
+    //}
+    return 0;
+}
+
+PROCESS_HANDLER_HANDLE process_handler_create(const char* process_path, SDK_TYPE sdk_type, PROCESS_END_CB process_end_cb, void* user_cb)
 {
     PROCESS_HANDLER_INFO* result;
     if (process_path == NULL)
@@ -367,13 +378,20 @@ int process_handler_get_process_info(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO
     }
     else
     {
-        if (get_process_stat(handle, proc_info) == 0)
+        if (!process_handler_is_active(handle))
         {
-            result = 0;
+            result = __LINE__;
         }
         else
         {
-            result = handle->memory_size;
+            if (get_process_stat(handle, proc_info) == 0)
+            {
+                result = 0;
+            }
+            else
+            {
+                result = handle->memory_size;
+            }
         }
     }
     return result;

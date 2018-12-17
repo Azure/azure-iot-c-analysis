@@ -13,6 +13,36 @@
 #define ALLOC_SIZE          1024*1000 // one K
 #define RUN_TIME_SEC        50
 
+uint32_t calcualte_pi(void)
+{
+    int r[2800 + 1];
+    int i, k;
+    int b, d;
+    int carry = 0;
+
+    for (i = 0; i < 2800; i++) {
+        r[i] = 2000;
+    }
+
+    for (k = 2800; k > 0; k -= 14) {
+        d = 0;
+
+        i = k;
+        for (;;) {
+            d += r[i] * 10000;
+            b = 2 * i - 1;
+
+            r[i] = d % b;
+            d /= b;
+            i--;
+            if (i == 0) break;
+            d *= i;
+        }
+        (void)printf("%.4d", carry + d / 10000);
+        carry = d % 10000;
+    }
+    return 0;
+}
 
 int main(int argc, char* argv[])
 {

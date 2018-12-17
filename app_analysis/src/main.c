@@ -228,7 +228,7 @@ static int execute_analysis_run(const ANALYSIS_INFO* analysis_info, ANALYSIS_RUN
     else
     {
         // Create the process
-        PROCESS_HANDLER_HANDLE proc_handle = process_handler_create(analysis_info->process_filename, NULL, NULL);
+        PROCESS_HANDLER_HANDLE proc_handle = process_handler_create(analysis_info->process_filename, analysis_info->target_sdk, NULL, NULL);
         if (proc_handle == NULL)
         {
             (void)printf("Failure creating process handler\r\n");

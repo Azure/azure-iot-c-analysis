@@ -70,5 +70,5 @@ add_subdirectory(deps/c-utility)
 include_directories(${SHARED_UTIL_INC_FOLDER})
 
 add_analytic_directory(app_analysis "app_analysis")
-add_executable(test_app test_app.c)
-target_link_libraries(test_app aziotsharedutil)
+
+add_subdirectory(test_files)
