@@ -276,6 +276,10 @@ static int execute_analysis_run(const ANALYSIS_INFO* analysis_info, ANALYSIS_RUN
                             {
                                 run_info->proc_info_min.memory_size = proc_info.memory_size;
                             }
+                            if (run_info->proc_info_min.cpu_load == 0 || proc_info.cpu_load < run_info->proc_info_min.cpu_load)
+                            {
+                                run_info->proc_info_min.cpu_load = proc_info.cpu_load;
+                            }
 
                             // Calculate max values
                             if (proc_info.handle_cnt > run_info->proc_info_max.handle_cnt)
@@ -290,6 +294,11 @@ static int execute_analysis_run(const ANALYSIS_INFO* analysis_info, ANALYSIS_RUN
                             {
                                 run_info->proc_info_max.memory_size = proc_info.memory_size;
                             }
+                            if (proc_info.cpu_load > run_info->proc_info_max.cpu_load)
+                            {
+                                run_info->proc_info_max.cpu_load = proc_info.cpu_load;
+                            }
+
                             temp_accumulator.handle_cnt += proc_info.handle_cnt;
                             temp_accumulator.num_threads += proc_info.num_threads;
                             temp_accumulator.memory_size += proc_info.memory_size;
@@ -353,21 +362,6 @@ int main(int argc, char* argv[])
         }
         else
         {
-            /*analysis_run.proc_info_avg.handle_cnt = 10;
-            analysis_run.proc_info_avg.memory_size = 200000;
-            analysis_run.proc_info_avg.num_threads = 1;
-            analysis_run.proc_info_avg.cpu_load = 9.10f;
-
-            analysis_run.proc_info_min.handle_cnt = 5;
-            analysis_run.proc_info_min.memory_size = 100000;
-            analysis_run.proc_info_min.num_threads = 1;
-            analysis_run.proc_info_min.cpu_load = 6.354f;
-
-            analysis_run.proc_info_max.handle_cnt = 30;
-            analysis_run.proc_info_max.memory_size = 400000;
-            analysis_run.proc_info_max.num_threads = 2;
-            analysis_run.proc_info_max.cpu_load = 13.00004f;*/
-
             report_data(&analysis_info, &analysis_run, analysis_info.protocol_type);
             result = 0;
         }
