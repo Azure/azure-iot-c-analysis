@@ -40,13 +40,15 @@ typedef enum SDK_TYPE_TAG
     SDK_TYPE_C,
     SDK_TYPE_CSHARP,
     SDK_TYPE_JAVA,
-    SDK_TYPE_NODE
+    SDK_TYPE_NODE,
+    SDK_TYPE_PYTHON
 } SDK_TYPE;
 
 typedef struct PROCESS_INFO_TAG
 {
     uint32_t num_threads;
     uint32_t memory_size;
+    uint32_t virtual_mem_size;
     uint32_t handle_cnt;
     double cpu_load;
 } PROCESS_INFO;

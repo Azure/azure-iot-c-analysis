@@ -514,9 +514,9 @@ void report_memory_usage(REPORT_HANDLE handle, const char* description, const PR
         char memory[FORMAT_MAX_LEN];
         char handles[FORMAT_MAX_LEN];
         
-        format_bytes(process_info->num_threads, threads, true);
-        format_bytes(process_info->memory_size, memory, true);
-        format_bytes(process_info->handle_cnt, handles, true);
+        format_bytes(process_info->num_threads, threads, false);
+        format_bytes(process_info->memory_size, memory, false);
+        format_bytes(process_info->handle_cnt, handles, false);
 
         const char* string_format = get_format_value(handle, OPERATION_MEMORY);
         STRING_HANDLE analysis_data = STRING_construct_sprintf(string_format, description, threads, memory, handles, process_info->cpu_load);

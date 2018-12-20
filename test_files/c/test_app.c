@@ -38,15 +38,21 @@ uint32_t calcualte_pi(void)
             if (i == 0) break;
             d *= i;
         }
-        (void)printf("%.4d", carry + d / 10000);
+        //(void)printf("%.4d", carry + d / 10000);
         carry = d % 10000;
     }
-    return 0;
+    return carry;
 }
 
 int main(int argc, char* argv[])
 {
     TICK_COUNTER_HANDLE tickcounter_handle;
+
+    (void)printf("cmd line args: \r\n");
+    for (int index = 0; index < argc; index++)
+    {
+        (void)printf("%s\r\n", argv[index]);
+    }
 
     if ((tickcounter_handle = tickcounter_create()) == NULL)
     {
@@ -67,9 +73,16 @@ int main(int argc, char* argv[])
         tickcounter_get_current_ms(tickcounter_handle, &last_poll_time);
 
         while (((current_time - last_poll_time)/1000) < RUN_TIME_SEC)
+        //for (size_t index = 0; index < 50; index++)
         {
             tickcounter_get_current_ms(tickcounter_handle, &current_time);
+            index++;
 
+            if ((index % 2) == 0)
+            {
+                printf("%d\r\n", (int)index);
+            }
+            (void)calcualte_pi();
             //for (size_t inner = 0; inner < 50; inner++)
             //{
             //    temp_value = 25654 % 32;
@@ -79,8 +92,7 @@ int main(int argc, char* argv[])
             //    (void)printf("Half way complete\r\n");
             //}
 
-            ThreadAPI_Sleep(1500);
-            index++;
+            ThreadAPI_Sleep(1000);
         }
         //free(test_value);
         (void)printf("Finished test application\r\n");

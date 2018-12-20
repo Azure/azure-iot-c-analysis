@@ -145,7 +145,7 @@ static int open_counter_query(PROCESS_HANDLER_INFO* handler_info)
     return result;
 }
 
-PROCESS_HANDLER_HANDLE process_handler_create(const char* process_path, PROCESS_END_CB process_end_cb, void* user_cb)
+PROCESS_HANDLER_HANDLE process_handler_create(const char* process_path, SDK_TYPE sdk_type, PROCESS_END_CB process_end_cb, void* user_cb)
 {
     PROCESS_HANDLER_INFO* result;
     if (process_path == NULL)
