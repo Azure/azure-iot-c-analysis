@@ -3,11 +3,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include <dirent.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
+#include <windows.h>
 
 #include "binary_handler.h"
 
@@ -24,9 +20,9 @@ static int calculate_size(const char* fpath, const struct stat* sb, int type_fla
     return 0;
 }
 
-static uint32_t calculate_exe_size(const char* file_path)
+static uint64_t calculate_exe_size(const char* file_path)
 {
-    uint32_t result;
+    uint64_t result;
     FILE* target_file = fopen(file_path, "rb");
     if (target_file == NULL)
     {
@@ -46,12 +42,41 @@ static uint32_t calculate_exe_size(const char* file_path)
 static uint64_t calculate_dir_size(const char* file_dir)
 {
     uint64_t result = 0;
+    WIN32_FIND_DATA ffd;
+
+    char full_path[MAX_PATH];
+    sprintf(full_path, "%s\\*", file_dir);
+    HANDLE find_handle = FindFirstFileA(full_path, &ffd);
+    if (find_handle == INVALID_HANDLE_VALUE)
+    {
+        LogError("Failure opening Findfile %s", file_dir);
+        result = 0;
+    }
+    else
+    {
+        do
+        {
+            if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+            {
+                sprintf(full_path, "%s/%s", file_dir, ffd.cFileName);
+                calculate_dir_size(full_path);
+            }
+            else
+            {
+                LARGE_INTEGER file_size;
+                file_size.LowPart = ffd.nFileSizeLow;
+                file_size.HighPart = ffd.nFileSizeHigh;
+                result += file_size.QuadPart;
+            }
+        } while (FindNextFile(find_handle, &ffd) != 0);
+        CloseHandle(find_handle);
+    }
     return result;
 }
 
-uint32_t binary_handler_get_size(const char* file_path, SDK_TYPE type)
+uint64_t binary_handler_get_size(const char* file_path, SDK_TYPE type)
 {
-    uint32_t result;
+    uint64_t result;
     if (file_path == NULL)
     {
         LogError("Invalid argument file_path is NULL");
@@ -77,8 +102,7 @@ uint32_t binary_handler_get_size(const char* file_path, SDK_TYPE type)
                     break;
                 }
             }
-            uint64_t cal = calculate_dir_size(dir_path);
-            result = 0;
+            result = calculate_dir_size(dir_path);
         }
         else
         {
