@@ -40,8 +40,8 @@ static const char* const NODE_BASE_ARRAY = "analysisItem";
 static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"sdkAnalysis\" : { \"osType\": \"%s\", \"sdkType\": \"%s\", \"version\": \"1.0.0\", \"dateTime\": \"%s\", \"transport\": \"%s\", \"analysisItem\" : [] } }";
 static const char* const NODE_OPERATING_SYSTEM = "osType";
 
-static const char* const BINARY_SIZE_JSON_FMT = "{ \"analysisType\": \"Binary\", \"binarySize\" : \"%s\" }";
-static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"analysisType\": \"Memory\", \"description\" : \"%s\", \"threads\" : \"%s\", \"memory\" : \"%s\", \"handles\" : \"%s\", \"cpuLoad\" : \"%.02f %%\" } }";
+static const char* const BINARY_SIZE_JSON_FMT = "{ \"analysisType\": \"diskSize\", \"size\" : \"%s\" }";
+static const char* const HEAP_ANALYSIS_JSON_FMT = "{ \"analysisType\": \"memoryUsage\", \"description\" : \"%s\", \"threads\" : \"%s\", \"memory\" : \"%s\", \"handles\" : \"%s\", \"cpuLoad\" : \"%.02f %%\" } }";
 static const char* const NETWORK_ANALYSIS_JSON_FMT = "{ \"analysisType\": \"Network\", \"description\" : \"%s\", \"msgSize\" : %d, \"transmitBytes\" : \"%s\", \"transmitCount\" : \"%s\", \"recvBytes\" : \"%s\", \"recvCount\" : \"%s\" } }";
 
 static const char* const BINARY_SIZE_CSV_FMT = "%s, %s, %s, %s, %s, %s";
@@ -483,7 +483,7 @@ void report_binary_sizes(REPORT_HANDLE handle, const char* description, const EX
     if (handle != NULL)
     {
         char byte_formatted[FORMAT_MAX_LEN];
-        format_bytes(exe_info->binary_size, byte_formatted, false);
+        format_bytes((uint32_t)exe_info->app_size, byte_formatted, false);
 
         const char* string_format = get_format_value(handle, OPERATION_BINARY_SIZE);
         STRING_HANDLE binary_data = STRING_construct_sprintf(string_format, byte_formatted);

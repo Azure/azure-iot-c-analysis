@@ -128,6 +128,10 @@ static int parse_command_line(int argc, char* argv[], ANALYSIS_INFO* anaylsis_in
                 {
                     anaylsis_info->target_sdk = SDK_TYPE_NODE;
                 }
+                else if (strcmp(argv[index], "python") == 0)
+                {
+                    anaylsis_info->target_sdk = SDK_TYPE_PYTHON;
+                }
                 else
                 {
                     if (index == argc - 1)
@@ -341,36 +345,16 @@ int main(int argc, char* argv[])
     else
     {
         ANALYSIS_RUN analysis_run = { 0 };
-        if (analysis_info.target_sdk == SDK_TYPE_C)
-        {
-            analysis_run.exe_info.binary_size = binary_handler_get_size(analysis_info.process_filename, analysis_info.target_sdk);
-        }
+        analysis_run.exe_info.app_size = binary_handler_get_size(analysis_info.process_filename, analysis_info.target_sdk);
 
-        if (execute_analysis_run(&analysis_info, &analysis_run) != 0)
+        /*if (execute_analysis_run(&analysis_info, &analysis_run) != 0)
         {
             (void)printf("execute_analysis_run failed\r\n");
             result = __LINE__;
-        }
-        else
-        {
-            /*analysis_run.proc_info_avg.handle_cnt = 10;
-            analysis_run.proc_info_avg.memory_size = 200000;
-            analysis_run.proc_info_avg.num_threads = 1;
-            analysis_run.proc_info_avg.cpu_load = 9.10f;
+        }*/
 
-            analysis_run.proc_info_min.handle_cnt = 5;
-            analysis_run.proc_info_min.memory_size = 100000;
-            analysis_run.proc_info_min.num_threads = 1;
-            analysis_run.proc_info_min.cpu_load = 6.354f;
-
-            analysis_run.proc_info_max.handle_cnt = 30;
-            analysis_run.proc_info_max.memory_size = 400000;
-            analysis_run.proc_info_max.num_threads = 2;
-            analysis_run.proc_info_max.cpu_load = 13.00004f;*/
-
-            report_data(&analysis_info, &analysis_run, analysis_info.protocol_type);
-            result = 0;
-        }
+        report_data(&analysis_info, &analysis_run, analysis_info.protocol_type);
+        result = 0;
     }
     (void)printf("Press any key to continue:");
     (void)getchar();

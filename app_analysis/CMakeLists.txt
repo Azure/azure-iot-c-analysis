@@ -9,7 +9,6 @@ set(app_analysis_h_files
 )
 
 set(app_analysis_c_files
-    src/binary_handler.c
     src/main.c
     ../mem_reporter.c
     ../deps/parson/parson.c
@@ -19,14 +18,16 @@ if(WIN32)
     set(app_analysis_c_files
         ${app_analysis_c_files}
         src/process_handler_win.c
-    )
+        src/binary_handler_win.c
+        )
     #windows needs this define
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 else()
     set(app_analysis_c_files
         ${app_analysis_c_files}
         src/process_handler_linux.c
-    )
+        src/binary_handler_linux.c
+        )
 endif(WIN32)
 
 include_directories(${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_LIST_DIR}/inc ..)

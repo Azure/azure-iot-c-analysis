@@ -13,6 +13,6 @@ extern "C" {
 
 #include "mem_reporter.h"
 
-extern uint32_t binary_handler_get_size(const char* file_path, SDK_TYPE type);
+extern uint64_t binary_handler_get_size(const char* file_path, SDK_TYPE type);
 
 #endif // BINARY_HANDLER_H

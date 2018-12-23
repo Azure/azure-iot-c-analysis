@@ -64,7 +64,7 @@ typedef struct NETWORK_INFO_TAG
 
 typedef struct EXECUTABLE_INFO_TAG
 {
-    uint32_t binary_size;
+    uint64_t app_size;
 } EXECUTABLE_INFO;
 
 #endif // APP_ANALYSIS_CONST_H

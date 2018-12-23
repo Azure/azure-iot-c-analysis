@@ -318,13 +318,21 @@ static int start_process(const PROCESS_HANDLER_INFO* handle, const char* cmdline
         case SDK_TYPE_JAVA:
             break;
         case SDK_TYPE_NODE:
+        {
+            // node <process_filename> <cmdline_args>
+            if (execl("node", handle->process_filename, cmdline_args, (char*)NULL) == -1)
+            {
+                LogError("Failure executing script %s", handle->process_filename);
+                result = __LINE__;
+            }
             break;
+        }
         case SDK_TYPE_PYTHON:
         {
             // python <process_filename> <cmdline_args>
             if (execl("python", handle->process_filename, cmdline_args, (char*)NULL) == -1)
             {
-                LogError("Failure executing process %s", handle->process_filename);
+                LogError("Failure executing script %s", handle->process_filename);
                 result = __LINE__;
             }
             break;

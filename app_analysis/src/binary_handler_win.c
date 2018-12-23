@@ -3,10 +3,26 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "binary_handler.h"
 
 #include "azure_c_shared_utility/xlogging.h"
+
+#ifdef WIN32
+static const char DIR_SEPARATOR = '\\';
+#else
+static const char DIR_SEPARATOR = '/';
+#endif
+
+static int calculate_size(const char* fpath, const struct stat* sb, int type_flag)
+{
+    return 0;
+}
 
 static uint32_t calculate_exe_size(const char* file_path)
 {
@@ -27,6 +43,12 @@ static uint32_t calculate_exe_size(const char* file_path)
     return result;
 }
 
+static uint64_t calculate_dir_size(const char* file_dir)
+{
+    uint64_t result = 0;
+    return result;
+}
+
 uint32_t binary_handler_get_size(const char* file_path, SDK_TYPE type)
 {
     uint32_t result;
@@ -40,6 +62,23 @@ uint32_t binary_handler_get_size(const char* file_path, SDK_TYPE type)
         if (type == SDK_TYPE_C)
         {
             result = calculate_exe_size(file_path);
+        }
+        else if (type == SDK_TYPE_NODE)
+        {
+            char dir_path[128];
+            size_t path_count = strlen(file_path);
+            memset(dir_path, 0, 128);
+
+            for (size_t index = path_count-1; index > 0; index--)
+            {
+                if (file_path[index] == DIR_SEPARATOR)
+                {
+                    strncpy(dir_path, file_path, index);
+                    break;
+                }
+            }
+            uint64_t cal = calculate_dir_size(dir_path);
+            result = 0;
         }
         else
         {
