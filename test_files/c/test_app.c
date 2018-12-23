@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
         size_t index = 1;
 
         (void)printf("test application will running for %d seconds\r\n", RUN_TIME_SEC);
-        long temp_value;
+        //long temp_value;
 
         tickcounter_get_current_ms(tickcounter_handle, &last_poll_time);
 

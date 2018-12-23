@@ -280,6 +280,10 @@ static int execute_analysis_run(const ANALYSIS_INFO* analysis_info, ANALYSIS_RUN
                             {
                                 run_info->proc_info_min.memory_size = proc_info.memory_size;
                             }
+                            if (run_info->proc_info_min.cpu_load == 0 || proc_info.cpu_load < run_info->proc_info_min.cpu_load)
+                            {
+                                run_info->proc_info_min.cpu_load = proc_info.cpu_load;
+                            }
 
                             // Calculate max values
                             if (proc_info.handle_cnt > run_info->proc_info_max.handle_cnt)
@@ -294,6 +298,11 @@ static int execute_analysis_run(const ANALYSIS_INFO* analysis_info, ANALYSIS_RUN
                             {
                                 run_info->proc_info_max.memory_size = proc_info.memory_size;
                             }
+                            if (proc_info.cpu_load > run_info->proc_info_max.cpu_load)
+                            {
+                                run_info->proc_info_max.cpu_load = proc_info.cpu_load;
+                            }
+
                             temp_accumulator.handle_cnt += proc_info.handle_cnt;
                             temp_accumulator.num_threads += proc_info.num_threads;
                             temp_accumulator.memory_size += proc_info.memory_size;
