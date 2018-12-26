@@ -356,14 +356,16 @@ int main(int argc, char* argv[])
         ANALYSIS_RUN analysis_run = { 0 };
         analysis_run.exe_info.app_size = binary_handler_get_size(analysis_info.process_filename, analysis_info.target_sdk);
 
-        /*if (execute_analysis_run(&analysis_info, &analysis_run) != 0)
+        if (execute_analysis_run(&analysis_info, &analysis_run) != 0)
         {
             (void)printf("execute_analysis_run failed\r\n");
             result = __LINE__;
-        }*/
-
-        report_data(&analysis_info, &analysis_run, analysis_info.protocol_type);
-        result = 0;
+        }
+        else
+        {
+            report_data(&analysis_info, &analysis_run, analysis_info.protocol_type);
+            result = 0;
+        }
     }
     (void)printf("Press any key to continue:");
     (void)getchar();

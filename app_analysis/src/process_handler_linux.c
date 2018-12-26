@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <dirent.h>
+#include <errno.h>
 
 #include "process_handler.h"
 
@@ -26,7 +27,7 @@ typedef struct PROCESS_HANDLER_INFO_TAG
 {
     SDK_TYPE sdk_type;
     char* process_filename;
-    const char* filename;
+    char* filename;
     pid_t proc_id;
     PROCESS_END_CB process_end_cb;
     void* user_cb;
@@ -311,29 +312,37 @@ static int start_process(const PROCESS_HANDLER_INFO* handle, const char* cmdline
                 LogError("Failure executing process %s", handle->process_filename);
                 result = __LINE__;
             }
+            else
+            {
+                // Wait for the process to complete
+                pid_t p_id = getpid();
+                waitpid(p_id, &status, 0);
+            }
             break;
         }
         case SDK_TYPE_CSHARP:
             break;
         case SDK_TYPE_JAVA:
             break;
+        case SDK_TYPE_PYTHON:
         case SDK_TYPE_NODE:
         {
             // node <process_filename> <cmdline_args>
-            if (execl("node", handle->process_filename, cmdline_args, (char*)NULL) == -1)
+            STRING_HANDLE exec_line = STRING_construct_sprintf("%s %s %s", handle->process_filename, handle->filename, cmdline_args == NULL ? "" : cmdline_args);
+            if (exec_line == NULL)
             {
-                LogError("Failure executing script %s", handle->process_filename);
+                LogError("Failure constructing executing line");
                 result = __LINE__;
             }
-            break;
-        }
-        case SDK_TYPE_PYTHON:
-        {
-            // python <process_filename> <cmdline_args>
-            if (execl("python", handle->process_filename, cmdline_args, (char*)NULL) == -1)
+            else
             {
-                LogError("Failure executing script %s", handle->process_filename);
-                result = __LINE__;
+                printf("\r\n%s\r\n", STRING_c_str(exec_line) );
+                if (system(STRING_c_str(exec_line)) == -1)
+                {
+                    LogError("Failure executing script %d:%s %s", errno, handle->process_filename, handle->filename);
+                    result = __LINE__;
+                }
+                STRING_delete(exec_line);
             }
             break;
         }
@@ -342,12 +351,6 @@ static int start_process(const PROCESS_HANDLER_INFO* handle, const char* cmdline
             LogError("Failure attempt to execute unknown SDK type %d", (int)handle->sdk_type);
             result = __FAILURE__;
             break;
-    }
-    if (result == 0)
-    {
-        // Wait for the process to complete
-        pid_t p_id = getpid();
-        waitpid(p_id, &status, 0);
     }
     exit(status);
     return result;
@@ -363,15 +366,57 @@ PROCESS_HANDLER_HANDLE process_handler_create(const char* process_path, SDK_TYPE
     else if ((result = (PROCESS_HANDLER_INFO*)malloc(sizeof(PROCESS_HANDLER_INFO))) != NULL)
     {
         memset(result, 0, sizeof(PROCESS_HANDLER_INFO));
-        if (mallocAndStrcpy_s(&result->process_filename, process_path) != 0)
+        result->sdk_type = sdk_type;
+        switch (sdk_type)
         {
-            free(result);
-            result = NULL;
+            case SDK_TYPE_C:
+                if (mallocAndStrcpy_s(&result->process_filename, process_path) != 0)
+                {
+                    LogError("Failure allocating process name");
+                    free(result);
+                    result = NULL;
+                }
+                break;
+            case SDK_TYPE_CSHARP:
+                break;
+            case SDK_TYPE_JAVA:
+                break;
+            case SDK_TYPE_PYTHON:
+                if (mallocAndStrcpy_s(&result->process_filename, "/usr/bin/python") != 0)
+                {
+                    LogError("Failure allocating process name");
+                    free(result);
+                    result = NULL;
+                }
+                else if (mallocAndStrcpy_s(&result->filename, process_path) != 0)
+                {
+                    LogError("Failure allocating process name");
+                    free(result);
+                    result = NULL;
+                }
+                break;
+                break;
+            case SDK_TYPE_NODE:
+                if (mallocAndStrcpy_s(&result->process_filename, "/usr/bin/node") != 0)
+                {
+                    LogError("Failure allocating process name");
+                    free(result);
+                    result = NULL;
+                }
+                else if (mallocAndStrcpy_s(&result->filename, process_path) != 0)
+                {
+                    LogError("Failure allocating process name");
+                    free(result);
+                    result = NULL;
+                }
+                break;
+            case SDK_TYPE_UNKNOWN:
+            default:
+                free(result);
+                result = NULL;
+                break;
         }
-        else
-        {
-            result->sdk_type = sdk_type;
-        }
+
     }
     return result;
 }
@@ -391,6 +436,7 @@ void process_handler_destroy(PROCESS_HANDLER_HANDLE handle)
 {
     if (handle != NULL)
     {
+        free(handle->process_filename);
         free(handle);
     }
 }
@@ -417,16 +463,9 @@ int process_handler_start(PROCESS_HANDLER_HANDLE handle, const char* cmdline_arg
         {
             // Give the executable a chance to start
             ThreadAPI_Sleep(2000);
-            if ((handle->proc_id = get_process_id(handle->filename)) == 0)
-            {
-                LogError("Failure getting process id of application %s", handle->process_filename);
-                result = __LINE__;
-            }
-            else
-            {
-                handle->process_state = 'R';
-                result = 0;
-            }
+            handle->proc_id = pid;
+            handle->process_state = 'R';
+            result = 0;
         }
     }
     return result;
