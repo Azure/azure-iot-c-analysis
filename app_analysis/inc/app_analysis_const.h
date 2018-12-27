@@ -11,11 +11,17 @@ extern "C" {
 #include <stdint.h>
 #endif
 
+#include "health_process_item.h"
+
 #ifdef WIN32
     static const char* OS_NAME = "Windows";
 #else
     static const char* OS_NAME = "Linux";
 #endif
+
+typedef void* HEALTH_ITEM_HANDLE;
+
+typedef int(*HEALTH_REPORTER_CONSTRUCT_JSON)(HEALTH_ITEM_HANDLE handle, JSON_Object* object_node);
 
 typedef enum PROTOCOL_TYPE_TAG
 {
@@ -64,7 +70,13 @@ typedef struct NETWORK_INFO_TAG
 
 typedef struct EXECUTABLE_INFO_TAG
 {
-    uint64_t app_size;
+    HEALTH_ITEM_HANDLE app_size;
 } EXECUTABLE_INFO;
+
+typedef struct DEVICE_HEALTH_TAG
+{
+    uint8_t cpu_count;
+    uint64_t memory_amt;
+} DEVICE_HEALTH_INFO;
 
 #endif // APP_ANALYSIS_CONST_H

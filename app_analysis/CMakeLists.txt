@@ -3,24 +3,26 @@
 
 set(app_analysis_h_files
     inc/binary_handler.h
+    inc/device_info.h
+    inc/health_process_item.h
     inc/process_handler.h
     inc/dev_health_reporter.h
-    #inc/hash_table.h
-    ../deps/parson/parson.c
+    inc/app_analysis_const.h
+    ../deps/parson/parson.h
 )
 
 set(app_analysis_c_files
     src/main.c
     src/dev_health_reporter.c
-    #src/hash_table.c
     ../deps/parson/parson.c
+    src/binary_handler.c
 )
 
 if(WIN32)
     set(app_analysis_c_files
         ${app_analysis_c_files}
         src/process_handler_win.c
-        src/binary_handler_win.c
+        src/device_info_win.c
         )
     #windows needs this define
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -28,7 +30,7 @@ else()
     set(app_analysis_c_files
         ${app_analysis_c_files}
         src/process_handler_linux.c
-        src/binary_handler_linux.c
+        src/device_info_linux.c
         )
 endif(WIN32)
 

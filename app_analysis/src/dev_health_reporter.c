@@ -6,14 +6,12 @@
 
 #include "dev_health_reporter.h"
 
-#include "azure_c_shared_utility/threadapi.h"
-//#include "azure_c_shared_utility/gbnetwork.h"
-
 #include "azure_c_shared_utility/vector.h"
 #include "azure_c_shared_utility/strings.h"
 #include "azure_c_shared_utility/agenttime.h"
 #include "azure_c_shared_utility/xlogging.h"
 
+#include "health_process_item.h"
 #include "parson.h"
 
 /*#include "iothub.h"
@@ -38,9 +36,14 @@ static REPORTER_TYPE g_report_type = REPORTER_TYPE_JSON;
 static const char* const UNKNOWN_TYPE = "unknown";
 static const char* const NODE_SDK_ANALYSIS = "sdkAnalysis";
 static const char* const NODE_BASE_ARRAY = "analysisItem";
+
 static const char* const DEVICE_INFO_NODE = "deviceInfo";
 static const char* const CPU_COUNT_NODE = "cpuCount";
 static const char* const AVAILABLE_MEMORY_NODE = "availMemory";
+static const char* const DEVICE_HEALTH_RUN_NODE = "deviceHealthRun";
+static const char* const APP_TYPE_NODE = "appType";
+static const char* const DATETIME_NODE = "dateTime";
+static const char* const RUN_DURATION_NODE = "runDuration";
 
 static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"version\": \"1.0.0\", \"osType\": \"%s\" }";
 static const char* const NODE_OPERATING_SYSTEM = "osType";
@@ -84,7 +87,7 @@ typedef struct CSV_REPORT_INFO_TAG
 
 typedef struct HEALTH_REPORT_INFO_TAG
 {
-    uint32_t item_index;
+    HEALTH_ITEM_HANDLE health_handle;
     HEALTH_REPORTER_CONSTRUCT_JSON construct_json;
 } HEALTH_REPORT_INFO;
 
@@ -432,7 +435,7 @@ static int construct_device_health_node(JSON_Object* object_node, const DEVICE_H
             LogError("Failure setting cpu count node");
             result = __FAILURE__;
         }
-        else if (json_object_set_number(dev_info_obj, AVAILABLE_MEMORY_NODE, device_info->memory_amt) != JSONSuccess)
+        else if (json_object_set_number(dev_info_obj, AVAILABLE_MEMORY_NODE, (double)device_info->memory_amt) != JSONSuccess)
         {
             LogError("Failure setting available memory node");
             result = __FAILURE__;
@@ -466,10 +469,8 @@ HEALTH_REPORTER_HANDLE health_reporter_init(REPORTER_TYPE rpt_type, SDK_TYPE sdk
     }
     else
     {
-        //char date_time[DATE_TIME_LEN];
-        //get_report_date(date_time, DATE_TIME_LEN);
-        // , get_protocol_name(protocol) 
-        // , get_sdk_type(result->sdk_type) 
+        // , get_protocol_name(protocol)
+        // ,
 
         //JSON_Object* json_object;
         result->rpt_type = rpt_type;
@@ -546,11 +547,12 @@ void health_reporter_deinit(HEALTH_REPORTER_HANDLE handle)
         {
             STRING_delete(handle->rpt_value.csv_info.csv_list);
         }
+        VECTOR_destroy(handle->health_item_list);
         free(handle);
     }
 }
 
-int health_reporter_register_health_item(HEALTH_REPORTER_HANDLE handle, uint32_t item_index, HEALTH_REPORTER_CONSTRUCT_JSON construct_json)
+int health_reporter_register_health_item(HEALTH_REPORTER_HANDLE handle, HEALTH_ITEM_HANDLE item_handle, HEALTH_REPORTER_CONSTRUCT_JSON construct_json)
 {
     int result;
     if (handle == NULL)
@@ -561,7 +563,7 @@ int health_reporter_register_health_item(HEALTH_REPORTER_HANDLE handle, uint32_t
     else
     {
         HEALTH_REPORT_INFO hri;
-        hri.item_index = item_index;
+        hri.health_handle = item_handle;
         hri.construct_json = construct_json;
 
         if (VECTOR_push_back(handle->health_item_list, &hri, 1) != 0)
@@ -587,21 +589,66 @@ int health_reporter_process_health_run(HEALTH_REPORTER_HANDLE handle)
     }
     else
     {
-        size_t length = VECTOR_size(handle->health_item_list);
-        for (size_t index = 0; index < length; index++)
+        // Construct Health run node
+        JSON_Value* value_node = json_value_init_object();
+        if (value_node == NULL)
         {
-            HEALTH_REPORT_INFO* rpt_info;
-            rpt_info = (HEALTH_REPORT_INFO*)VECTOR_element(handle->health_item_list, index);
-            if (rpt_info != NULL)
+            LogError("Failure initializing device info object");
+            result = __FAILURE__;
+        }
+        else
+        {
+            JSON_Object* dev_health_run = json_value_get_object(value_node);
+            char date_time[DATE_TIME_LEN];
+            get_report_date(date_time, DATE_TIME_LEN);
+
+            if (json_object_set_string(dev_health_run, APP_TYPE_NODE, get_sdk_type(handle->sdk_type)) != JSONSuccess)
             {
-                JSON_Object* json_info = rpt_info->construct_json();
+                LogError("Failure setting cpu count node");
+                result = __FAILURE__;
+            }
+            else if (json_object_set_string(dev_health_run, DATETIME_NODE, date_time) != JSONSuccess)
+            {
+                LogError("Failure setting cpu count node");
+                result = __FAILURE__;
+            }
+            else if (json_object_set_number(dev_health_run, RUN_DURATION_NODE, 111) != JSONSuccess)
+            {
+                LogError("Failure setting cpu count node");
+                result = __FAILURE__;
+            }
+            else
+            {
+                size_t length = VECTOR_size(handle->health_item_list);
+                for (size_t index = 0; index < length; index++)
+                {
+                    HEALTH_REPORT_INFO* rpt_info;
+                    rpt_info = (HEALTH_REPORT_INFO*)VECTOR_element(handle->health_item_list, index);
+                    if (rpt_info != NULL)
+                    {
+                        if (rpt_info->construct_json(rpt_info->health_handle, dev_health_run) != 0)
+                        {
+                            LogError("Failure constructing json");
+                        }
+                    }
+                }
+
+                if (json_object_set_value(handle->rpt_value.json_info.health_object, DEVICE_HEALTH_RUN_NODE, value_node) != JSONSuccess)
+                {
+                    LogError("Failure setting json object");
+                    result = __FAILURE__;
+                }
+                else
+                {
+                    result = 0;
+                }
             }
         }
     }
     return result;
 }
 
-void report_binary_sizes(HEALTH_REPORTER_HANDLE handle, const char* description, const EXECUTABLE_INFO* exe_info)
+/*void report_binary_sizes(HEALTH_REPORTER_HANDLE handle, const char* description, const EXECUTABLE_INFO* exe_info)
 {
     if (handle != NULL)
     {
@@ -627,7 +674,7 @@ void report_binary_sizes(HEALTH_REPORTER_HANDLE handle, const char* description,
             STRING_delete(binary_data);
         }
     }
-}
+}*/
 
 void report_memory_usage(HEALTH_REPORTER_HANDLE handle, const char* description, const PROCESS_INFO* process_info)
 {
@@ -636,7 +683,7 @@ void report_memory_usage(HEALTH_REPORTER_HANDLE handle, const char* description,
         char threads[FORMAT_MAX_LEN];
         char memory[FORMAT_MAX_LEN];
         char handles[FORMAT_MAX_LEN];
-        
+
         format_bytes(process_info->num_threads, threads, false);
         format_bytes(process_info->memory_size, memory, false);
         format_bytes(process_info->handle_cnt, handles, false);
