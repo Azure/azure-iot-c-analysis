@@ -11,7 +11,7 @@
 
 #define LOOP_COUNT          4200
 #define ALLOC_SIZE          1024*1000 // one K
-#define RUN_TIME_SEC        50
+#define RUN_TIME_SEC        60
 
 uint32_t calcualte_pi(void)
 {
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     {
         //char* test_value = (char*)malloc(ALLOC_SIZE);
         //memset(test_value, '@', sizeof(ALLOC_SIZE));
-
+ 
         tickcounter_ms_t last_poll_time = 0;
         tickcounter_ms_t current_time = 0;
         size_t index = 1;

@@ -4,15 +4,17 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
-#include "mem_reporter.h"
+#include "dev_health_reporter.h"
 
 #include "azure_c_shared_utility/threadapi.h"
-#include "azure_c_shared_utility/gbnetwork.h"
+//#include "azure_c_shared_utility/gbnetwork.h"
+
 #include "azure_c_shared_utility/strings.h"
 #include "azure_c_shared_utility/agenttime.h"
 #include "azure_c_shared_utility/xlogging.h"
 
 #include "parson.h"
+#include "hash_table.h"
 
 /*#include "iothub.h"
 #include "iothub_device_client.h"
@@ -36,7 +38,11 @@ static REPORTER_TYPE g_report_type = REPORTER_TYPE_JSON;
 static const char* const UNKNOWN_TYPE = "unknown";
 static const char* const NODE_SDK_ANALYSIS = "sdkAnalysis";
 static const char* const NODE_BASE_ARRAY = "analysisItem";
-static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"version\": \"1.0.0\", \"osType\": \"%s\", \"deviceInfo\" : {},  [] }";
+static const char* const DEVICE_INFO_NODE = "deviceInfo";
+static const char* const CPU_COUNT_NODE = "cpuCount";
+static const char* const AVAILABLE_MEMORY_NODE = "availMemory";
+
+static const char* const SDK_ANALYSIS_EMPTY_NODE = "{ \"version\": \"1.0.0\", \"osType\": \"%s\" }";
 static const char* const NODE_OPERATING_SYSTEM = "osType";
 
 static const char* const BINARY_SIZE_JSON_FMT = "{ \"analysisType\": \"diskSize\", \"size\" : \"%s\" }";
@@ -58,10 +64,17 @@ static const char* const UPLOAD_INCLUDED = "false";
 static const char* const UPLOAD_INCLUDED = "true";
 #endif
 
+typedef enum OPERATION_TYPE_TAG
+{
+    OPERATION_NETWORK,
+    OPERATION_MEMORY,
+    OPERATION_BINARY_SIZE,
+} OPERATION_TYPE;
+
 typedef struct JSON_REPORT_INFO_TAG
 {
     JSON_Value* root_value;
-    JSON_Object* analysis_node;
+    JSON_Object* health_object;
 } JSON_REPORT_INFO;
 
 typedef struct CSV_REPORT_INFO_TAG
@@ -73,6 +86,7 @@ typedef struct REPORT_INFO_TAG
 {
     SDK_TYPE sdk_type;
     REPORTER_TYPE rpt_type;
+    HASH_TABLE_HANDLE health_item_list;
     union
     {
         JSON_REPORT_INFO json_info;
@@ -167,7 +181,7 @@ static void add_node_to_json(const char* node_data, const REPORT_INFO* report_in
         JSON_Array* base_array;
         JSON_Value* json_analysis;
 
-        if ((json_analysis = json_object_get_value(report_info->rpt_value.json_info.analysis_node, NODE_SDK_ANALYSIS)) == NULL)
+        if ((json_analysis = json_object_get_value(report_info->rpt_value.json_info.health_object, NODE_SDK_ANALYSIS)) == NULL)
         {
             LogError("ERROR: Failed getting node object value");
         }
@@ -278,7 +292,7 @@ static void get_report_date(char* date, size_t length)
     sprintf(date, "%d-%d-%d", tm_val->tm_mon+1, tm_val->tm_mday, tm_val->tm_year+1900);
 }
 
-static const char* get_protocol_name(PROTOCOL_TYPE protocol)
+/*static const char* get_protocol_name(PROTOCOL_TYPE protocol)
 {
     const char* result;
     switch (protocol)
@@ -304,7 +318,7 @@ static const char* get_protocol_name(PROTOCOL_TYPE protocol)
             break;
     }
     return result;
-}
+}*/
 
 static const char* get_sdk_type(SDK_TYPE sdk_type)
 {
@@ -393,26 +407,68 @@ static const char* get_format_value(const REPORT_INFO* report_info, OPERATION_TY
     return result;
 }
 
-REPORT_HANDLE report_initialize(REPORTER_TYPE rpt_type, SDK_TYPE sdk_type, PROTOCOL_TYPE protocol)
+static int construct_device_health_node(JSON_Object* object_node, const DEVICE_HEALTH_INFO* device_info)
+{
+    int result;
+    JSON_Value* value_node = json_value_init_object();
+    if (value_node == NULL)
+    {
+        LogError("Failure initializing device info object");
+        result = __FAILURE__;
+    }
+    else
+    {
+        JSON_Object* dev_info_obj = json_value_get_object(value_node);
+
+        if (json_object_set_number(dev_info_obj, CPU_COUNT_NODE, device_info->cpu_count) != JSONSuccess)
+        {
+            LogError("Failure setting cpu count node");
+            result = __FAILURE__;
+        }
+        else if (json_object_set_number(dev_info_obj, AVAILABLE_MEMORY_NODE, device_info->memory_amt) != JSONSuccess)
+        {
+            LogError("Failure setting available memory node");
+            result = __FAILURE__;
+        }
+        else if (json_object_set_value(object_node, DEVICE_INFO_NODE, value_node) != JSONSuccess)
+        {
+            LogError("Failure setting json object");
+            result = __FAILURE__;
+        }
+        else
+        {
+            result = 0;
+        }
+    }
+    return result;
+}
+
+HEALTH_REPORTER_HANDLE health_reporter_init(REPORTER_TYPE rpt_type, SDK_TYPE sdk_type, const DEVICE_HEALTH_INFO* device_info)
 {
     REPORT_INFO* result;
     if ((result = (REPORT_INFO*)malloc(sizeof(REPORT_INFO))) == NULL)
     {
         // Report failure
-        LogError("Failure allocating report infon");
+        LogError("Failure allocating report info");
+    }
+    else if ((result->health_item_list = hash_table_create(32, NULL, NULL)) == NULL)
+    {
+        LogError("Failure initializing health item list");
+
     }
     else
     {
         //char date_time[DATE_TIME_LEN];
         //get_report_date(date_time, DATE_TIME_LEN);
         // , get_protocol_name(protocol) 
+        // , get_sdk_type(result->sdk_type) 
 
         //JSON_Object* json_object;
         result->rpt_type = rpt_type;
         result->sdk_type = sdk_type;
         if (result->rpt_type == REPORTER_TYPE_JSON)
         {
-            STRING_HANDLE json_node = STRING_construct_sprintf(SDK_ANALYSIS_EMPTY_NODE, OS_NAME, get_sdk_type(result->sdk_type) );
+            STRING_HANDLE json_node = STRING_construct_sprintf(SDK_ANALYSIS_EMPTY_NODE, OS_NAME, "2");
             if (json_node == NULL)
             {
                 LogError("Failure creating Analysis node");
@@ -428,9 +484,17 @@ REPORT_HANDLE report_initialize(REPORTER_TYPE rpt_type, SDK_TYPE sdk_type, PROTO
                     free(result);
                     result = NULL;
                 }
-                else if ((result->rpt_value.json_info.analysis_node = json_value_get_object(result->rpt_value.json_info.root_value)) == NULL)
+                else if ((result->rpt_value.json_info.health_object = json_value_get_object(result->rpt_value.json_info.root_value)) == NULL)
                 {
                     LogError("Failure getting value node");
+                    json_value_free(result->rpt_value.json_info.root_value);
+                    free(result);
+                    result = NULL;
+                }
+                else if (construct_device_health_node(result->rpt_value.json_info.health_object, device_info) != 0)
+                {
+                    LogError("Failure getting value node");
+                    json_value_free(result->rpt_value.json_info.root_value);
                     free(result);
                     result = NULL;
                 }
@@ -461,7 +525,7 @@ REPORT_HANDLE report_initialize(REPORTER_TYPE rpt_type, SDK_TYPE sdk_type, PROTO
     return result;
 }
 
-void report_deinitialize(REPORT_HANDLE handle)
+void health_reporter_deinit(HEALTH_REPORTER_HANDLE handle)
 {
     // Close the file
     if (handle != NULL)
@@ -478,7 +542,42 @@ void report_deinitialize(REPORT_HANDLE handle)
     }
 }
 
-void report_binary_sizes(REPORT_HANDLE handle, const char* description, const EXECUTABLE_INFO* exe_info)
+int health_reporter_register_health_item(HEALTH_REPORTER_HANDLE handle, uint32_t item_index, HEALTH_REPORTER_CONSTRUCT_JSON construct_json)
+{
+    int result;
+    if (handle == NULL)
+    {
+        LogError("Invalid argument: handle value NULL");
+        result = __FAILURE__;
+    }
+    else if (hash_table_add_item(handle->health_item_list, item_index, construct_json) != 0)
+    {
+        LogError("Unable to add health item");
+        result = __FAILURE__;
+    }
+    else
+    {
+        result = 0;
+    }
+    return result;
+}
+
+int health_reporter_process_health_run(HEALTH_REPORTER_HANDLE handle)
+{
+    int result;
+    if (handle == NULL)
+    {
+        LogError("Invalid argument: handle value NULL");
+        result = __FAILURE__;
+    }
+    else
+    {
+
+    }
+    return result;
+}
+
+void report_binary_sizes(HEALTH_REPORTER_HANDLE handle, const char* description, const EXECUTABLE_INFO* exe_info)
 {
     if (handle != NULL)
     {
@@ -506,7 +605,7 @@ void report_binary_sizes(REPORT_HANDLE handle, const char* description, const EX
     }
 }
 
-void report_memory_usage(REPORT_HANDLE handle, const char* description, const PROCESS_INFO* process_info)
+void report_memory_usage(HEALTH_REPORTER_HANDLE handle, const char* description, const PROCESS_INFO* process_info)
 {
     if (handle != NULL)
     {
@@ -539,7 +638,7 @@ void report_memory_usage(REPORT_HANDLE handle, const char* description, const PR
     }
 }
 
-void report_network_usage(REPORT_HANDLE handle, const char* description, const NETWORK_INFO* network_info)
+void report_network_usage(HEALTH_REPORTER_HANDLE handle, const char* description, const NETWORK_INFO* network_info)
 {
     if (handle != NULL)
     {
@@ -572,7 +671,7 @@ void report_network_usage(REPORT_HANDLE handle, const char* description, const N
     }
 }
 
-bool report_write(REPORT_HANDLE handle, const char* output_file, const char* conn_string)
+bool report_write(HEALTH_REPORTER_HANDLE handle, const char* output_file, const char* conn_string)
 {
     bool result;
     if (handle == NULL)

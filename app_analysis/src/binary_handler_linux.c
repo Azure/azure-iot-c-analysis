@@ -12,6 +12,7 @@
 #include "binary_handler.h"
 
 #include "azure_c_shared_utility/xlogging.h"
+#include "azure_c_shared_utility/strings.h"
 
 #ifdef WIN32
 static const char DIR_SEPARATOR = '\\';
@@ -55,18 +56,27 @@ static uint64_t calculate_dir_size(const char* file_dir)
         struct dirent* sdir;
         while (sdir = readdir(dptr))
         {
-            char full_path[256];
-            sprintf(full_path, "%s/%s", file_dir, sdir->d_name);
-            if (sdir->d_type == DT_DIR)
+            STRING_HANDLE full_path = STRING_construct_sprintf("%s/%s", file_dir, sdir->d_name);
+            if (full_path == NULL)
             {
-                if (sdir->d_name[0] != '.')
-                {
-                    result += calculate_dir_size(full_path);
-                }
+                LogError("Failure constructing full path");
+                result = 0;
+                break;
             }
-            else if (sdir->d_type == DT_REG || sdir->d_type == DT_LNK)
+            else
             {
-                result += calculate_exe_size(full_path);
+                if (sdir->d_type == DT_DIR)
+                {
+                    if (sdir->d_name[0] != '.')
+                    {
+                        result += calculate_dir_size(STRING_c_str(full_path));
+                    }
+                }
+                else if (sdir->d_type == DT_REG || sdir->d_type == DT_LNK)
+                {
+                    result += calculate_exe_size(STRING_c_str(full_path));
+                }
+                STRING_delete(full_path);
             }
         }
     }

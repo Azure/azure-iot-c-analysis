@@ -11,7 +11,7 @@ extern "C" {
 #include <stdint.h>
 #endif
 
-#include "mem_reporter.h"
+#include "app_analysis_const.h"
 
 extern uint64_t binary_handler_get_size(const char* file_path, SDK_TYPE type);
 

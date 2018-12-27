@@ -416,7 +416,6 @@ PROCESS_HANDLER_HANDLE process_handler_create(const char* process_path, SDK_TYPE
                 result = NULL;
                 break;
         }
-
     }
     return result;
 }

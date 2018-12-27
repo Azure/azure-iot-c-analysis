@@ -20,8 +20,9 @@ static const char* const PROCESSOR_TIME_COUNTER_FMT = "\\Process(%s)\\%% Process
 
 typedef struct PROCESS_HANDLER_INFO_TAG
 {
+    SDK_TYPE sdk_type;
     char* process_filename;
-    char* process_name;
+    char* filename;
 
     PROCESS_INFORMATION proc_info;
     PROCESS_END_CB process_end_cb;
@@ -108,25 +109,25 @@ static int open_counter_query(PROCESS_HANDLER_INFO* handler_info)
     {
         char counter_path[64];
 
-        if (sprintf(counter_path, HANDLE_COUNT_COUNTER_FMT, handler_info->process_name) == 0 ||
+        if (sprintf(counter_path, HANDLE_COUNT_COUNTER_FMT, handler_info->filename) == 0 ||
             ((phd_status = PdhAddCounter(handler_info->query_handle, counter_path, 0, &handler_info->handle_counter)) != ERROR_SUCCESS))
         {
             LogError("Failure adding query handle counter 0x%x", phd_status);
             result = __FAILURE__;
         }
-        else if (sprintf(counter_path, THREAD_COUNT_COUNTER_FMT, handler_info->process_name) == 0 ||
+        else if (sprintf(counter_path, THREAD_COUNT_COUNTER_FMT, handler_info->filename) == 0 ||
             ((phd_status = PdhAddCounter(handler_info->query_handle, counter_path, 0, &handler_info->thread_counter)) != ERROR_SUCCESS))
         {
             LogError("Failure adding query thread counter 0x%x", phd_status);
             result = __FAILURE__;
         }
-        else if (sprintf(counter_path, WORKING_SET_COUNTER_FMT, handler_info->process_name) == 0 ||
+        else if (sprintf(counter_path, WORKING_SET_COUNTER_FMT, handler_info->filename) == 0 ||
             ((phd_status = PdhAddCounter(handler_info->query_handle, counter_path, 0, &handler_info->ws_counter)) != ERROR_SUCCESS))
         {
             LogError("Failure adding query working set counter 0x%x", phd_status);
             result = __FAILURE__;
         }
-        else if (sprintf(counter_path, PROCESSOR_TIME_COUNTER_FMT, handler_info->process_name) == 0 ||
+        else if (sprintf(counter_path, PROCESSOR_TIME_COUNTER_FMT, handler_info->filename) == 0 ||
             ((phd_status = PdhAddCounter(handler_info->query_handle, counter_path, 0, &handler_info->proc_time_counter)) != ERROR_SUCCESS))
         {
             LogError("Failure adding query process time counter 0x%x", phd_status);
@@ -134,6 +135,7 @@ static int open_counter_query(PROCESS_HANDLER_INFO* handler_info)
         }
         else if ((phd_status = PdhCollectQueryData(handler_info->query_handle)) != ERROR_SUCCESS)
         {
+            //PDH_NO_DATA
             LogError("Failure intial PdhCollectQueryData 0x%x", phd_status);
             result = __FAILURE__;
         }
@@ -156,23 +158,82 @@ PROCESS_HANDLER_HANDLE process_handler_create(const char* process_path, SDK_TYPE
     else if ((result = (PROCESS_HANDLER_INFO*)malloc(sizeof(PROCESS_HANDLER_INFO))) != NULL)
     {
         memset(result, 0, sizeof(PROCESS_HANDLER_INFO));
-        if (mallocAndStrcpy_s(&result->process_filename, process_path) != 0)
+        result->sdk_type = sdk_type;
+        switch (sdk_type)
         {
-            LogError("Failure allocating process filename");
-            free(result);
-            result = NULL;
-        }
-        else if (mallocAndStrcpy_s(&result->process_name, "test_app") != 0)
-        {
-            LogError("Failure allocating process filename");
-            free(result->process_filename);
-            free(result);
-            result = NULL;
-        }
-        else
-        {
-            result->process_end_cb = process_end_cb;
-            result->user_cb = user_cb;
+            case SDK_TYPE_C:
+                if (mallocAndStrcpy_s(&result->process_filename, process_path) != 0)
+                {
+                    LogError("Failure allocating process name");
+                    free(result);
+                    result = NULL;
+                }
+                else
+                {
+                    size_t name_len = 0;
+                    size_t file_len = strlen(result->process_filename);
+                    const char* iterator = result->process_filename + file_len;
+                    do
+                    {
+                        if (*iterator == '\\')
+                        {
+                            if ((result->filename = malloc(name_len - 4)) == NULL)
+                            {
+                                LogError("Failure allocating filename");
+                                free(result->process_filename);
+                                free(result);
+                                result = NULL;
+                            }
+                            else
+                            {
+                                strncpy(result->filename, iterator + 1, name_len - 5);
+                                result->filename[name_len - 5] = '\0';
+                            }
+                            break;
+                        }
+                        name_len++;
+                        iterator--;
+                    } while (iterator != result->process_filename);
+                }
+                break;
+            case SDK_TYPE_CSHARP:
+                break;
+            case SDK_TYPE_JAVA:
+                break;
+            case SDK_TYPE_PYTHON:
+                if (mallocAndStrcpy_s(&result->process_filename, "python.exe") != 0)
+                {
+                    LogError("Failure allocating process name");
+                    free(result);
+                    result = NULL;
+                }
+                else if (mallocAndStrcpy_s(&result->filename, process_path) != 0)
+                {
+                    LogError("Failure allocating process name");
+                    free(result);
+                    result = NULL;
+                }
+                break;
+                break;
+            case SDK_TYPE_NODE:
+                if (mallocAndStrcpy_s(&result->process_filename, "node.exe") != 0)
+                {
+                    LogError("Failure allocating process name");
+                    free(result);
+                    result = NULL;
+                }
+                else if (mallocAndStrcpy_s(&result->filename, process_path) != 0)
+                {
+                    LogError("Failure allocating process name");
+                    free(result);
+                    result = NULL;
+                }
+                break;
+            case SDK_TYPE_UNKNOWN:
+            default:
+                free(result);
+                result = NULL;
+                break;
         }
     }
     return result;
@@ -210,7 +271,7 @@ void process_handler_destroy(PROCESS_HANDLER_HANDLE handle)
         CloseHandle(handle->proc_info.hThread);
         handle->proc_info.hThread = NULL;
         free(handle->process_filename);
-        free(handle->process_name);
+        free(handle->filename);
         free(handle);
     }
 }

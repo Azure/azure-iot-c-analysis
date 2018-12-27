@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include "process_handler.h"
 #include "binary_handler.h"
-#include "mem_reporter.h"
+#include "dev_health_reporter.h"
 
 #include "azure_c_shared_utility/threadapi.h"
 #include "azure_c_shared_utility/tickcounter.h"
@@ -195,7 +195,12 @@ static int report_data(const ANALYSIS_INFO* analysis_info, const ANALYSIS_RUN* r
 {
     int result;
 
-    REPORT_HANDLE rpt_handle = report_initialize(REPORTER_TYPE_JSON, analysis_info->target_sdk, type);
+    DEVICE_HEALTH_INFO device_info;
+    // todo GEt device Info
+    device_info.cpu_count = 2;
+    device_info.memory_amt = 2345678;
+
+    HEALTH_REPORTER_HANDLE rpt_handle = health_reporter_init(REPORTER_TYPE_JSON, analysis_info->target_sdk, &device_info);
     if (rpt_handle == NULL)
     {
         (void)printf("Failure loading reporter object\r\n");
@@ -203,16 +208,16 @@ static int report_data(const ANALYSIS_INFO* analysis_info, const ANALYSIS_RUN* r
     }
     else
     {
-        report_binary_sizes(rpt_handle, "", &run_info->exe_info);
+        //report_binary_sizes(rpt_handle, "", &run_info->exe_info);
 
         //
-        report_memory_usage(rpt_handle, "average", &run_info->proc_info_avg);
-        report_memory_usage(rpt_handle, "minimum", &run_info->proc_info_min);
-        report_memory_usage(rpt_handle, "maximum", &run_info->proc_info_max);
+        //report_memory_usage(rpt_handle, "average", &run_info->proc_info_avg);
+        //report_memory_usage(rpt_handle, "minimum", &run_info->proc_info_min);
+        //report_memory_usage(rpt_handle, "maximum", &run_info->proc_info_max);
 
         report_write(rpt_handle, NULL, NULL);
 
-        report_deinitialize(rpt_handle);
+        health_reporter_deinit(rpt_handle);
         result = 0;
     }
 
@@ -310,7 +315,7 @@ static int execute_analysis_run(const ANALYSIS_INFO* analysis_info, ANALYSIS_RUN
                         }
                         else
                         {
-                            continue_run = false;;
+                            continue_run = false;
                         }
 
                         //NETWORK_INFO network_info;
@@ -335,10 +340,33 @@ static int execute_analysis_run(const ANALYSIS_INFO* analysis_info, ANALYSIS_RUN
     return result;
 }
 
+#include "hash_table.h"
+
+static void hash_rm_item(hash_table_key key, void* item, void* user_ctx)
+{
+
+}
+
 int main(int argc, char* argv[])
 {
     int result;
     ANALYSIS_INFO analysis_info = { 0 };
+
+
+    HASH_TABLE_HANDLE h = hash_table_create(8, hash_rm_item, NULL);
+    if (h != NULL)
+    {
+        hash_table_key key_val = 38;
+        hash_table_add_item(h, key_val, (void*)0x56774);
+
+        void* ret_value = hash_table_lookup(h, key_val);
+
+        hash_table_destroy(h);
+    }
+
+
+
+
 
     if (parse_command_line(argc, argv, &analysis_info) != 0)
     {
@@ -356,16 +384,32 @@ int main(int argc, char* argv[])
         ANALYSIS_RUN analysis_run = { 0 };
         analysis_run.exe_info.app_size = binary_handler_get_size(analysis_info.process_filename, analysis_info.target_sdk);
 
-        if (execute_analysis_run(&analysis_info, &analysis_run) != 0)
+        /*if (execute_analysis_run(&analysis_info, &analysis_run) != 0)
         {
             (void)printf("execute_analysis_run failed\r\n");
             result = __LINE__;
         }
         else
-        {
+        {*/
+        // Calculate the min values
+        analysis_run.proc_info_min.handle_cnt = 1;
+        analysis_run.proc_info_min.num_threads = 1;
+        analysis_run.proc_info_min.memory_size = 1;
+        analysis_run.proc_info_min.cpu_load = 1;
+
+        analysis_run.proc_info_max.handle_cnt = 100;
+        analysis_run.proc_info_max.num_threads = 100;
+        analysis_run.proc_info_max.memory_size = 100;
+        analysis_run.proc_info_max.cpu_load = 100;
+
+        analysis_run.proc_info_avg.handle_cnt = 50;
+        analysis_run.proc_info_avg.memory_size = 50;
+        analysis_run.proc_info_avg.num_threads = 50;
+        analysis_run.proc_info_avg.cpu_load = 50;
+
             report_data(&analysis_info, &analysis_run, analysis_info.protocol_type);
             result = 0;
-        }
+        //}
     }
     (void)printf("Press any key to continue:");
     (void)getchar();

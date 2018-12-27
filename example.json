@@ -1,0 +1,39 @@
+{
+    "version": "1.0.0",
+    "osType": "Windows",
+    "deviceInfo": {
+        "cpuCount":2,
+        "availMemory":234567
+    },
+    "deviceHealthRun": {
+        "sdkType": "iot-sdk-c",
+        "dateTime": "12-26-2018",
+        "durationMin": "240",
+        "diskSize": {
+            "size": "63,488"
+        },
+        "memoryUsage": [
+            {
+                "description": "average",
+                "threads": "1",
+                "memory": "2,995,547",
+                "handles": "50",
+                "cpuLoad": "1.05 %"
+            },
+            {
+                "description": "minimum",
+                "threads": "1",
+                "memory": "2,990,080",
+                "handles": "50",
+                "cpuLoad": "1.55 %"
+            },
+            {
+                "description": "maximum",
+                "threads": "3",
+                "memory": "3,035,136",
+                "handles": "50",
+                "cpuLoad": "1.56 %"
+            }
+        ]
+    }
+}
