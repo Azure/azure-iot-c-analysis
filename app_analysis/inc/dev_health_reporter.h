@@ -26,7 +26,7 @@ typedef struct DEVICE_HEALTH_TAG
 } DEVICE_HEALTH_INFO;
 
 
-typedef JSON_Object(*HEALTH_REPORTER_CONSTRUCT_JSON)(void);
+typedef JSON_Object*(*HEALTH_REPORTER_CONSTRUCT_JSON)(void);
 
 
     MOCKABLE_FUNCTION(, HEALTH_REPORTER_HANDLE, health_reporter_init, REPORTER_TYPE, rpt_type, SDK_TYPE, sdk_type, const DEVICE_HEALTH_INFO*, device_info);

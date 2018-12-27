@@ -353,7 +353,7 @@ int main(int argc, char* argv[])
     ANALYSIS_INFO analysis_info = { 0 };
 
 
-    HASH_TABLE_HANDLE h = hash_table_create(8, hash_rm_item, NULL);
+    /*HASH_TABLE_HANDLE h = hash_table_create(8, hash_rm_item, NULL);
     if (h != NULL)
     {
         hash_table_key key_val = 38;
@@ -362,11 +362,7 @@ int main(int argc, char* argv[])
         void* ret_value = hash_table_lookup(h, key_val);
 
         hash_table_destroy(h);
-    }
-
-
-
-
+    }*/
 
     if (parse_command_line(argc, argv, &analysis_info) != 0)
     {

@@ -27,8 +27,4 @@ extern "C" {
     MOCKABLE_FUNCTION(, int, hash_table_add_item, HASH_TABLE_HANDLE, handle, hash_table_key, key, void*, item);
     MOCKABLE_FUNCTION(, void*, hash_table_lookup, HASH_TABLE_HANDLE, handle, hash_table_key, key);
 
-    MOCKABLE_FUNCTION(, HASH_ITERATOR_HANDLE, hash_table_get_first_item, HASH_TABLE_HANDLE, handle, hash_table_key*, key, void*, item);
-    MOCKABLE_FUNCTION(, int, hash_table_get_next_item, HASH_ITERATOR_HANDLE, index_handle, hash_table_key*, key, void*, item);
-    MOCKABLE_FUNCTION(, void, hash_table_destroy_iterator, HASH_ITERATOR_HANDLE, index_handle);
-
 #endif // HASH_TABLE_H

@@ -9,12 +9,12 @@
 #include "azure_c_shared_utility/threadapi.h"
 //#include "azure_c_shared_utility/gbnetwork.h"
 
+#include "azure_c_shared_utility/vector.h"
 #include "azure_c_shared_utility/strings.h"
 #include "azure_c_shared_utility/agenttime.h"
 #include "azure_c_shared_utility/xlogging.h"
 
 #include "parson.h"
-#include "hash_table.h"
 
 /*#include "iothub.h"
 #include "iothub_device_client.h"
@@ -82,11 +82,18 @@ typedef struct CSV_REPORT_INFO_TAG
     STRING_HANDLE csv_list;
 } CSV_REPORT_INFO;
 
+typedef struct HEALTH_REPORT_INFO_TAG
+{
+    uint32_t item_index;
+    HEALTH_REPORTER_CONSTRUCT_JSON construct_json;
+} HEALTH_REPORT_INFO;
+
 typedef struct REPORT_INFO_TAG
 {
     SDK_TYPE sdk_type;
     REPORTER_TYPE rpt_type;
-    HASH_TABLE_HANDLE health_item_list;
+    //HASH_TABLE_HANDLE health_item_list;
+    VECTOR_HANDLE health_item_list;
     union
     {
         JSON_REPORT_INFO json_info;
@@ -451,7 +458,8 @@ HEALTH_REPORTER_HANDLE health_reporter_init(REPORTER_TYPE rpt_type, SDK_TYPE sdk
         // Report failure
         LogError("Failure allocating report info");
     }
-    else if ((result->health_item_list = hash_table_create(32, NULL, NULL)) == NULL)
+    //else if ((result->health_item_list = hash_table_create(32, NULL, NULL)) == NULL)
+    else if ((result->health_item_list = VECTOR_create(sizeof(HEALTH_REPORT_INFO))) == NULL)
     {
         LogError("Failure initializing health item list");
 
@@ -550,14 +558,21 @@ int health_reporter_register_health_item(HEALTH_REPORTER_HANDLE handle, uint32_t
         LogError("Invalid argument: handle value NULL");
         result = __FAILURE__;
     }
-    else if (hash_table_add_item(handle->health_item_list, item_index, construct_json) != 0)
-    {
-        LogError("Unable to add health item");
-        result = __FAILURE__;
-    }
     else
     {
-        result = 0;
+        HEALTH_REPORT_INFO hri;
+        hri.item_index = item_index;
+        hri.construct_json = construct_json;
+
+        if (VECTOR_push_back(handle->health_item_list, &hri, 1) != 0)
+        {
+            LogError("Unable to add health item");
+            result = __FAILURE__;
+        }
+        else
+        {
+            result = 0;
+        }
     }
     return result;
 }
@@ -572,7 +587,16 @@ int health_reporter_process_health_run(HEALTH_REPORTER_HANDLE handle)
     }
     else
     {
-
+        size_t length = VECTOR_size(handle->health_item_list);
+        for (size_t index = 0; index < length; index++)
+        {
+            HEALTH_REPORT_INFO* rpt_info;
+            rpt_info = (HEALTH_REPORT_INFO*)VECTOR_element(handle->health_item_list, index);
+            if (rpt_info != NULL)
+            {
+                JSON_Object* json_info = rpt_info->construct_json();
+            }
+        }
     }
     return result;
 }

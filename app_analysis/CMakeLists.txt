@@ -5,14 +5,14 @@ set(app_analysis_h_files
     inc/binary_handler.h
     inc/process_handler.h
     inc/dev_health_reporter.h
-    inc/hash_table.h
+    #inc/hash_table.h
     ../deps/parson/parson.c
 )
 
 set(app_analysis_c_files
     src/main.c
     src/dev_health_reporter.c
-    src/hash_table.c
+    #src/hash_table.c
     ../deps/parson/parson.c
 )
 
