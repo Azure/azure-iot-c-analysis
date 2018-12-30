@@ -22,6 +22,11 @@
 
 static const char* MEMORY_VALUE_NAME = "Pss";
 static const size_t MEMORY_VALUE_LEN = 3;
+static const char* DESCRIPTION_NODE = "description";
+static const char* THREAD_NODE = "threads";
+static const char* MEMORY_USED_NODE = "memoryUsed";
+static const char* HANDLES_NODE = "handles";
+static const char* CPU_LOAD_NODE = "cpuLoad";
 
 typedef struct PROCESS_HANDLER_INFO_TAG
 {
@@ -353,6 +358,68 @@ static int start_process(const PROCESS_HANDLER_INFO* handle, const char* cmdline
             break;
     }
     exit(status);
+    return result;
+}
+
+static int add_memory_usage_object(const char* desc, PROCESS_INFO* proc_info)
+{
+    int result;
+    JSON_Value* value_node = json_value_init_object();
+    if (value_node == NULL)
+    {
+        LogError("Failure initializing device info object");
+        result = __FAILURE__;
+    }
+    else
+    {
+        JSON_Object* dev_info_obj = json_value_get_object(value_node);
+
+        if (json_object_set_string(dev_info_obj, DESCRIPTION_NODE, desc) != JSONSuccess)
+        {
+            LogError("Failure setting cpu count node");
+            result = __FAILURE__;
+        }
+        else if (json_object_set_number(dev_info_obj, THREAD_NODE, proc_info->num_threads) != JSONSuccess)
+        {
+            LogError("Failure setting cpu count node");
+            result = __FAILURE__;
+        }
+        else if (json_object_set_number(dev_info_obj, MEMORY_USED_NODE, proc_info->memory_size) != JSONSuccess)
+        {
+            LogError("Failure setting cpu count node");
+            result = __FAILURE__;
+        }
+        else if (json_object_set_number(dev_info_obj, HANDLES_NODE, proc_info->handle_cnt) != JSONSuccess)
+        {
+            LogError("Failure setting cpu count node");
+            result = __FAILURE__;
+        }
+        else
+        {
+            result = 0;
+        }
+    }
+    return result;
+}
+
+static int construct_process_json(HEALTH_ITEM_HANDLE handle, JSON_Object* object_node)
+{
+    int result;
+    if (handle == NULL || object_node == NULL)
+    {
+        LogError("Failure initializing device info object");
+        result = __FAILURE__;
+    }
+    else
+    {
+        PROCESS_HANDLER_INFO* process_handler = (PROCESS_HANDLER_INFO*)handle;
+        JSON_Value* value_node = json_value_init_object();
+        if (value_node == NULL)
+        {
+            LogError("Failure initializing device info object");
+            result = __FAILURE__;
+        }
+    }
     return result;
 }
 

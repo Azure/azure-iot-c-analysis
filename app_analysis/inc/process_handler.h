@@ -24,12 +24,18 @@ extern PROCESS_HANDLER_HANDLE process_handler_create(const char* process_path, S
 extern PROCESS_HANDLER_HANDLE process_handler_create_by_pid(int process_id, PROCESS_END_CB process_end_cb, void* user_cb);
 extern void process_handler_destroy(PROCESS_HANDLER_HANDLE handle);
 
+extern HEALTH_ITEM_HANDLE process_handler_start_health_run(PROCESS_HANDLER_HANDLE handle, const char* cmdline_args);
+extern int process_handler_end_health_run(PROCESS_HANDLER_HANDLE handle, HEALTH_ITEM_HANDLE item);
+
+extern HEALTH_REPORTER_CONSTRUCT_JSON process_handler_get_json_callback(void);
+
 
 extern int process_handler_start(PROCESS_HANDLER_HANDLE handle, const char* cmdline_args);
 extern int process_handler_end(PROCESS_HANDLER_HANDLE handle);
 
+
+
 extern bool process_handler_is_active(PROCESS_HANDLER_HANDLE handle);
-extern int process_handler_get_process_info(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO* proc_info);
-extern int process_handler_get_network_info(PROCESS_HANDLER_HANDLE handle, NETWORK_INFO* network_info);
+ extern int process_handler_get_process_info(PROCESS_HANDLER_HANDLE handle, PROCESS_INFO* proc_info);
 
 #endif // PROCESS_HANDLER_H

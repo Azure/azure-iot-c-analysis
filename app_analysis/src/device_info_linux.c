@@ -20,7 +20,9 @@ int device_info_load(DEVICE_HEALTH_INFO* device_info)
     else
     {
         device_info->cpu_count = (uint8_t)sysconf(_SC_NPROCESSORS_ONLN);
-        device_info->memory_amt = (uint64_t)sysconf(_SC_AVPHYS_PAGES);
+        long pages = sysconf(_SC_PHYS_PAGES);
+        long page_size = sysconf(_SC_PAGE_SIZE);
+        device_info->memory_amt = (uint64_t)(pages * page_size);
         result = 0;
     }
     return result;

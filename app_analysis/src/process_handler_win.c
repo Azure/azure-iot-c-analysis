@@ -147,6 +147,21 @@ static int open_counter_query(PROCESS_HANDLER_INFO* handler_info)
     return result;
 }
 
+static int construct_process_json(HEALTH_ITEM_HANDLE handle, JSON_Object* object_node)
+{
+    int result;
+    if (handle == NULL || object_node == NULL)
+    {
+        LogError("Failure initializing device info object");
+        result = __FAILURE__;
+    }
+    else
+    {
+        PROCESS_HANDLER_INFO* process_handler = (PROCESS_HANDLER_INFO*)handle;
+    }
+    return result;
+}
+
 PROCESS_HANDLER_HANDLE process_handler_create(const char* process_path, SDK_TYPE sdk_type, PROCESS_END_CB process_end_cb, void* user_cb)
 {
     PROCESS_HANDLER_INFO* result;

@@ -648,34 +648,6 @@ int health_reporter_process_health_run(HEALTH_REPORTER_HANDLE handle)
     return result;
 }
 
-/*void report_binary_sizes(HEALTH_REPORTER_HANDLE handle, const char* description, const EXECUTABLE_INFO* exe_info)
-{
-    if (handle != NULL)
-    {
-        char byte_formatted[FORMAT_MAX_LEN];
-        format_bytes((uint32_t)exe_info->app_size, byte_formatted, false);
-
-        const char* string_format = get_format_value(handle, OPERATION_BINARY_SIZE);
-        STRING_HANDLE binary_data = STRING_construct_sprintf(string_format, byte_formatted);
-        if (binary_data == NULL)
-        {
-            LogError("ERROR: Failed to allocate binary json");
-        }
-        else
-        {
-            if (handle->rpt_type == REPORTER_TYPE_CSV)
-            {
-                add_node_to_csv(STRING_c_str(binary_data), handle);
-            }
-            else
-            {
-                add_node_to_json(STRING_c_str(binary_data), handle);
-            }
-            STRING_delete(binary_data);
-        }
-    }
-}*/
-
 void report_memory_usage(HEALTH_REPORTER_HANDLE handle, const char* description, const PROCESS_INFO* process_info)
 {
     if (handle != NULL)
