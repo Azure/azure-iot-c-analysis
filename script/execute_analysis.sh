@@ -12,6 +12,8 @@ gcc --version
 openssl version
 uname -r
 
+cmake_cmd=""
+run_binary_strip="0"
 script_dir=$(cd "$(dirname "$0")" && pwd)
 repo_root=$(cd "${script_dir}/.." && pwd)
 cmake_folder=$repo_root"/cmake/analysis_linux"
@@ -19,22 +21,48 @@ cmake_folder=$repo_root"/cmake/analysis_linux"
 conn_string="${IOTHUB_CONNECTION_STRING}"
 rpt_conn_string="${REPORT_CONNECTION_STRING}"
 
-rm -r -f $cmake_folder
-mkdir -p $cmake_folder
-pushd $cmake_folder
+run_binary_info()
+{
+    rm -r -f $cmake_folder
+    mkdir -p $cmake_folder
+    pushd $cmake_folder
+
+    cmake $repo_root $cmake_cmd >/dev/null
+
+    echo "Building SDK"
+    make -j >/dev/null
+
+    if [ $cmake_cmd == "1" ] ; then
+        # Run strip from the binaries./
+        echo "running strip on transport executable"
+        strip ./binary_info/lower_layer/mqtt_transport_ll/mqtt_transport_ll
+        strip ./binary_info/lower_layer/mqtt_ws_transport_ll/mqtt_ws_transport_ll
+        strip ./binary_info/lower_layer/amqp_transport_ll/amqp_transport_ll
+        strip ./binary_info/lower_layer/amqp_ws_transport_ll/amqp_ws_transport_ll
+    fi
+
+    echo "Retrieving binary info without upload to Blob"
+    ./binary_info/binary_info -c $cmake_folder -s $rpt_conn_string
+
+    popd
+}
 
 echo "Running cmake with -DCMAKE_BUILD_TYPE=Release"
-cmake $repo_root -DCMAKE_BUILD_TYPE=Release >/dev/null # -Duse_prov_client:BOOL=ON
+cmake_cmd="-DCMAKE_BUILD_TYPE=Release"
+run_binary_info
 
-echo "Building SDK"
-make -j >/dev/null
+echo "Running cmake with -DCMAKE_BUILD_TYPE=Release no_logging"
+cmake_cmd="-DCMAKE_BUILD_TYPE=Release -Dno_logging=ON"
+run_binary_info
 
-# Run strip from the binaries./
-#./binary_info/lower_layer/
+echo "Running cmake with -DCMAKE_BUILD_TYPE=Release no_logging and strip"
+cmake_cmd="-DCMAKE_BUILD_TYPE=Release -Dno_logging=ON"
+run_binary_strip="1"
+run_binary_info
 
 # Run the analysis applications
-echo "Retrieving binary info"
-./binary_info/binary_info -c $cmake_folder -s $rpt_conn_string
+pushd $cmake_folder
+
 echo "retrieving telemetry memory info"
 ./memory/telemetry_memory/telemetry_memory -c $conn_string
 echo "retrieving telemetry network info"
