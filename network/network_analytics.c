@@ -29,7 +29,8 @@ typedef enum ARGUEMENT_TYPE_TAG
     ARGUEMENT_TYPE_CONNECTION_STRING,
     ARGUEMENT_TYPE_SCOPE_ID,
     ARGUEMENT_TYPE_DEVICE_ID,
-    ARGUEMENT_TYPE_DEVICE_KEY
+    ARGUEMENT_TYPE_DEVICE_KEY,
+    ARGUEMENT_TYPE_EXCLUDE_CONN_HEADER
 } ARGUEMENT_TYPE;
 
 typedef struct MEM_ANALYTIC_INFO_TAG
@@ -37,6 +38,7 @@ typedef struct MEM_ANALYTIC_INFO_TAG
     int create_device;
     const char* connection_string;
     IOTHUB_DEVICE device_info;
+    int exclude_conn_header;
 } MEM_ANALYTIC_INFO;
 
 static int initialize_sdk()
@@ -210,7 +212,7 @@ static int construct_dev_conn_string(MEM_ANALYTIC_INFO* mem_info, CONNECTION_INF
 
 static int parse_command_line(int argc, char* argv[], MEM_ANALYTIC_INFO* mem_info, CONNECTION_INFO* conn_info)
 {
-    // -c "[connection_string]" -d [device_name] -k [device_key] 
+    // -c "[connection_string]" -d [device_name] -k [device_key] -x -s [scope_id]
     int result = 0;
     ARGUEMENT_TYPE argument_type = ARGUEMENT_TYPE_UNKNOWN;
 
@@ -233,6 +235,11 @@ static int parse_command_line(int argc, char* argv[], MEM_ANALYTIC_INFO* mem_inf
             else if (argv[index][0] == '-' && (argv[index][1] == 's' || argv[index][1] == 'S'))
             {
                 argument_type = ARGUEMENT_TYPE_SCOPE_ID;
+            }
+            else if (argv[index][0] == '-' && (argv[index][1] == 'x' || argv[index][1] == 'X'))
+            {
+                argument_type = ARGUEMENT_TYPE_EXCLUDE_CONN_HEADER;
+                mem_info->exclude_conn_header = 1;
             }
         }
         else
@@ -271,17 +278,17 @@ static int parse_command_line(int argc, char* argv[], MEM_ANALYTIC_INFO* mem_inf
     return result;
 }
 
-static void send_network_info(CONNECTION_INFO* conn_info, REPORT_HANDLE report_handle)
+static void send_network_info(CONNECTION_INFO* conn_info, REPORT_HANDLE report_handle, int exclude_conn_header)
 {
     // MQTT Sending
 #ifdef USE_MQTT
-    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_MQTT, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_MQTT_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_MQTT, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY, exclude_conn_header);
+    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_MQTT_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY, exclude_conn_header);
 #endif
     // AMQP Sending
 #ifdef USE_AMQP
-    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_AMQP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
-    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY);
+    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_AMQP, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY, exclude_conn_header);
+    initiate_lower_level_operation(conn_info, report_handle, PROTOCOL_AMQP_WS, MESSAGES_TO_USE, USE_MSG_BYTE_ARRAY, exclude_conn_header);
 #endif
 }
 
@@ -319,7 +326,7 @@ int main(int argc, char* argv[])
     }
     else
     {
-        send_network_info(&conn_info, report_handle);
+        send_network_info(&conn_info, report_handle, mem_info.exclude_conn_header);
 
         result = 0;
 

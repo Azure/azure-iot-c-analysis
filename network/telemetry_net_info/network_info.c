@@ -38,6 +38,7 @@ typedef struct IOTHUB_CLIENT_SAMPLE_INFO_TAG
 {
     int connected;
     int stop_running;
+    int exclude_conn_header;
 } IOTHUB_CLIENT_INFO;
 
 static IOTHUB_CLIENT_TRANSPORT_PROVIDER initialize(MEM_ANALYSIS_INFO* iot_mem_info, PROTOCOL_TYPE protocol, size_t num_msgs_to_send)
@@ -83,7 +84,10 @@ static void iothub_connection_status(IOTHUB_CLIENT_CONNECTION_STATUS result, IOT
         {
             iothub_info->connected = 1;
             // Reset the Metrics so to not get the connection preamble included, just the sends
-            gbnetwork_resetMetrics();
+            if (iothub_info->exclude_conn_header == 0)
+            {
+                gbnetwork_resetMetrics();
+            }
         }
         else
         {
@@ -106,7 +110,7 @@ static void send_confirm_callback(IOTHUB_CLIENT_CONFIRMATION_RESULT result, void
     }
 }
 
-int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, REPORT_HANDLE report_handle, PROTOCOL_TYPE protocol, size_t num_msgs_to_send, bool use_byte_array_msg)
+int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, REPORT_HANDLE report_handle, PROTOCOL_TYPE protocol, size_t num_msgs_to_send, bool use_byte_array_msg, int exclude_conn_header)
 {
     int result;
     if (protocol == PROTOCOL_HTTP)
@@ -151,6 +155,7 @@ int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, REPORT_HAND
                 size_t msg_count = 0;
                 iothub_info.stop_running = 0;
                 iothub_info.connected = 0;
+                iothub_info.exclude_conn_header = exclude_conn_header;
 
                 if (protocol == PROTOCOL_HTTP)
                 {
