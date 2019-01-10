@@ -32,6 +32,7 @@
 #define PROXY_PORT              8888
 #define MESSAGES_TO_USE         1
 #define TIME_BETWEEN_MESSAGES   1
+#define MESSAGE_PAYLOAD_LENGTH  962
 
 typedef struct IOTHUB_CLIENT_SAMPLE_INFO_TAG
 {
@@ -81,6 +82,8 @@ static void iothub_connection_status(IOTHUB_CLIENT_CONNECTION_STATUS result, IOT
         if (result == IOTHUB_CLIENT_CONNECTION_AUTHENTICATED)
         {
             iothub_info->connected = 1;
+            // Reset the Metrics so to not get the connection preamble included, just the sends
+            gbnetwork_resetMetrics();
         }
         else
         {
@@ -166,8 +169,21 @@ int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, REPORT_HAND
                         if (msg_count < num_msgs_to_send)
                         {
                             IOTHUB_MESSAGE_HANDLE msg_handle;
-                            static char msgText[1024];
-                            sprintf_s(msgText, sizeof(msgText), "{ \"message_index\" : \"%zu\" }", msg_count++);
+                            static char msgText[MESSAGE_PAYLOAD_LENGTH + 1];
+                            memset(msgText, 0, MESSAGE_PAYLOAD_LENGTH + 1);
+                            char current_value = 'a';
+                            for (size_t index = 0; index < MESSAGE_PAYLOAD_LENGTH; index++)
+                            {
+                                msgText[index] = current_value;
+                                if (current_value == 'z')
+                                {
+                                    current_value = 'a';
+                                }
+                                else
+                                {
+                                    current_value++;
+                                }
+                            }
 
                             iot_mem_info.msg_sent = strlen(msgText);
                             if (use_byte_array_msg)
@@ -203,6 +219,7 @@ int initiate_lower_level_operation(const CONNECTION_INFO* conn_info, REPORT_HAND
                                 }
                                 else
                                 {
+                                    msg_count++;
                                 }
                                 IoTHubMessage_Destroy(msg_handle);
                             }
