@@ -23,12 +23,12 @@ rpt_conn_string="${REPORT_CONNECTION_STRING}"
 
 run_binary_info()
 {
-    #rm -r -f $cmake_folder
-    #mkdir -p $cmake_folder
+    rm -r -f $cmake_folder
+    mkdir -p $cmake_folder
     pushd $cmake_folder  >/dev/null
 
-    #cmake $repo_root $cmake_cmd >/dev/null
-    #make -j >/dev/null
+    cmake $repo_root $cmake_cmd >/dev/null
+    make -j >/dev/null
 
     if [ $run_binary_strip -ge 1 ]; then
         # Run strip from the binaries./
