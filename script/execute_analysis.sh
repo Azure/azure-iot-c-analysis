@@ -13,7 +13,7 @@ openssl version
 uname -r
 
 cmake_cmd=""
-run_binary_strip="0"
+run_binary_strip=0
 script_dir=$(cd "$(dirname "$0")" && pwd)
 repo_root=$(cd "${script_dir}/.." && pwd)
 cmake_folder=$repo_root"/cmake/analysis_linux"
@@ -23,28 +23,24 @@ rpt_conn_string="${REPORT_CONNECTION_STRING}"
 
 run_binary_info()
 {
-    rm -r -f $cmake_folder
-    mkdir -p $cmake_folder
-    pushd $cmake_folder
+    #rm -r -f $cmake_folder
+    #mkdir -p $cmake_folder
+    pushd $cmake_folder  >/dev/null
 
-    cmake $repo_root $cmake_cmd >/dev/null
+    #cmake $repo_root $cmake_cmd >/dev/null
+    #make -j >/dev/null
 
-    echo "Building SDK"
-    make -j >/dev/null
-
-    if [ $cmake_cmd == "1" ] ; then
+    if [ $run_binary_strip -ge 1 ]; then
         # Run strip from the binaries./
-        echo "running strip on transport executable"
         strip ./binary_info/lower_layer/mqtt_transport_ll/mqtt_transport_ll
         strip ./binary_info/lower_layer/mqtt_ws_transport_ll/mqtt_ws_transport_ll
         strip ./binary_info/lower_layer/amqp_transport_ll/amqp_transport_ll
         strip ./binary_info/lower_layer/amqp_ws_transport_ll/amqp_ws_transport_ll
     fi
 
-    echo "Retrieving binary info without upload to Blob"
     ./binary_info/binary_info -c $cmake_folder -s $rpt_conn_string
-
-    popd
+    echo ""
+    popd  >/dev/null
 }
 
 echo "Running cmake with -DCMAKE_BUILD_TYPE=Release"
@@ -57,7 +53,7 @@ run_binary_info
 
 echo "Running cmake with -DCMAKE_BUILD_TYPE=Release no_logging and strip"
 cmake_cmd="-DCMAKE_BUILD_TYPE=Release -Dno_logging=ON"
-run_binary_strip="1"
+run_binary_strip=1
 run_binary_info
 
 # Run the analysis applications
