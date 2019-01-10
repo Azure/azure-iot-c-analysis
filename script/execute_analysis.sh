@@ -1,9 +1,13 @@
 #!/bin/bash
 #set -o pipefail
 #
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 set -e
 
+# Print version
+cat /etc/*release | grep VERSION*
 gcc --version
 openssl version
 uname -r
