@@ -19,12 +19,18 @@ option(skip_samples "set skip_samples to ON to skip building samples (default is
 include(ExternalProject)
 
 # Check out Git submodules.
-if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk/.gitmodules")
-    message("running git clone of the c-sdk into ${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk")
-    execute_process (COMMAND git clone https://github.com/Azure/azure-iot-sdk-c.git --recursive  -q --no-tags -b ${sdk_branch} ${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk)
+set(C_SDK_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk")
+
+if (NOT EXISTS ${C_SDK_WORKING_DIRECTORY}"/.gitmodules")
+    message("running git clone of the c-sdk into ${C_SDK_WORKING_DIRECTORY}")
+    execute_process (COMMAND git clone https://github.com/Azure/azure-iot-sdk-c.git -q --no-tags -b ${sdk_branch} ${C_SDK_WORKING_DIRECTORY})
+
+    message("running git submodules in ${C_SDK_WORKING_DIRECTORY}")
+    execute_process (COMMAND git submodule update --init
+        WORKING_DIRECTORY ${C_SDK_WORKING_DIRECTORY})
 else()
     if (${refresh_sdk})
-        execute_process (COMMAND git pull origin ${sdk_branch} WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk")
+        execute_process (COMMAND git pull origin ${sdk_branch} WORKING_DIRECTORY ${C_SDK_WORKING_DIRECTORY})
         # Turn off refresh so it doesn't refresh everytime
         set(refresh_sdk OFF CACHE BOOL "" FORCE)
     endif()
