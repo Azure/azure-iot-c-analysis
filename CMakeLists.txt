@@ -10,6 +10,7 @@ set(TARGET_GIT_BRANCH "master" CACHE STRING "Branch of the SDK repo to target`")
 
 set(use_prov_client OFF)
 set(sdk_branch "master" CACHE STRING "The branch of the sdk")
+set(git_repo_uri "https://github.com/Azure/azure-iot-sdk-c.git" CACHE STRING "The branch of the sdk")
 
 option(dont_use_uploadtoblob "set dont_use_uploadtoblob to ON if the functionality of upload to blob is to be excluded, OFF otherwise. It requires HTTP" ON)
 option(refresh_sdk "get the latest sdk" OFF)
@@ -21,9 +22,9 @@ include(ExternalProject)
 # Check out Git submodules.
 set(C_SDK_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/deps/c-sdk")
 
-if (NOT EXISTS ${C_SDK_WORKING_DIRECTORY}"/.gitmodules")
+if (NOT EXISTS "${C_SDK_WORKING_DIRECTORY}/.gitmodules")
     message("running git clone of the c-sdk into ${C_SDK_WORKING_DIRECTORY}")
-    execute_process (COMMAND git clone https://github.com/Azure/azure-iot-sdk-c.git -q --no-tags -b ${sdk_branch} ${C_SDK_WORKING_DIRECTORY})
+    execute_process (COMMAND git clone ${git_repo_uri} -q --no-tags -b ${sdk_branch} ${C_SDK_WORKING_DIRECTORY})
 
     message("running git submodules in ${C_SDK_WORKING_DIRECTORY}")
     execute_process (COMMAND git submodule update --init
